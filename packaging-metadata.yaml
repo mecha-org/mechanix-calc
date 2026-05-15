@@ -1,0 +1,12 @@
+name: packaging-metadata
+version: 1.0.0
+summary: Metadata for Mechanix app packaging
+applications:
+  - name: calculator
+    folder: .
+    binary: calculator
+    description: "Mechanix Calculator application"
+    maintainer: "Mechanix Team <team@mecha.so>"
+    dependencies:
+      - libflutter-elinux-wayland-dev
+      - libflutter-engine-dev
