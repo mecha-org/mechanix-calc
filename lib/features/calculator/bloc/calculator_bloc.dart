@@ -17,11 +17,30 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
   void _onNumberPressed(NumberPressed event, Emitter<CalculatorState> emit) {
     String newExpression = state.expression;
-    if (newExpression == '0' && event.number != '.') {
-      newExpression = event.number;
-    } else {
-      newExpression += event.number;
+
+    // 1. Handle decimal point press
+    if (event.number == '.') {
+      // If the screen is empty or currently just '0', force it to be '0.'
+      if (newExpression.isEmpty || newExpression == '0') {
+        newExpression = '0.';
+      } else {
+        // SAFEGUARD: Prevent adding multiple decimals in a single number (e.g., '5.5.')
+        final segments = newExpression.split(RegExp(r'[+\-×÷%]'));
+        if (segments.isNotEmpty && segments.last.contains('.')) {
+          return; // Ignore the press if this number already has a decimal point
+        }
+        newExpression += '.';
+      }
     }
+    // 2. Handle normal numbers (0-9)
+    else {
+      if (newExpression == '0') {
+        newExpression = event.number;
+      } else {
+        newExpression += event.number;
+      }
+    }
+
     emit(state.copyWith(expression: newExpression, errorMessage: ''));
   }
 
@@ -30,6 +49,13 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     Emitter<CalculatorState> emit,
   ) {
     const operators = ['+', '-', '×', '÷', '%'];
+
+    // If the screen is empty or currently shows just '0', and there is no
+    // previous result, treat a first-pressed '-' strictly as a negative sign.
+    if (state.expression.isEmpty && event.operator == '-') {
+      emit(state.copyWith(expression: '-', result: '', errorMessage: ''));
+      return;
+    }
 
     // 1. Handle the case where the expression is empty
     if (state.expression.isEmpty) {
@@ -121,7 +147,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       if (eval == 0) {
         result = '0';
       } else {
-        result = eval.toString();
+        result = double.parse(eval.toStringAsPrecision(10)).toString();
         if (result.endsWith('.0')) {
           result = result.substring(0, result.length - 2);
         }
