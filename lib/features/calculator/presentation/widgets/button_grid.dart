@@ -1,3 +1,4 @@
+import 'package:calculator/core/utils/constant.dart';
 import 'package:calculator/features/calculator/bloc/calculator_bloc.dart';
 import 'package:calculator/features/calculator/bloc/calculator_event.dart';
 import 'package:calculator/features/calculator/presentation/widgets/calculator_button.dart';
@@ -6,29 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ButtonGrid extends StatelessWidget {
   const ButtonGrid({super.key});
-
-  static const List<String> _buttons = [
-    'AC',
-    '+/-',
-    '%',
-    '÷',
-    '7',
-    '8',
-    '9',
-    '×',
-    '4',
-    '5',
-    '6',
-    '-',
-    '1',
-    '2',
-    '3',
-    '+',
-    '⌫',
-    '0',
-    '.',
-    '=',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +31,7 @@ class ButtonGrid extends StatelessWidget {
 
           return GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _buttons.length,
+            itemCount: calcGridButtons.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
               mainAxisSpacing: 4,
@@ -61,7 +39,7 @@ class ButtonGrid extends StatelessWidget {
               childAspectRatio: dynamicAspectRatio,
             ),
             itemBuilder: (context, index) {
-              final text = _buttons[index];
+              final text = calcGridButtons[index];
               return CalcButton(
                 text: text,
                 onTap: () => _handleTap(bloc, text),
@@ -74,20 +52,17 @@ class ButtonGrid extends StatelessWidget {
   }
 
   void _handleTap(CalculatorBloc bloc, String text) {
-    if (text == 'AC')
-      bloc.add(ClearPressed());
-    else if (text == '⌫')
-      bloc.add(DeletePressed());
-    else if (text == '=')
-      bloc.add(CalculateResult());
-    else if (text == '+/-')
-      bloc.add(ToggleSignPressed());
-    else if (text == '%')
-      bloc.add(PercentagePressed());
-    else if (['÷', '×', '-', '+'].contains(text))
-      bloc.add(OperatorPressed(text));
-    else
-      bloc.add(NumberPressed(text));
+    final event = switch (text) {
+      'AC' => const ClearPressed(),
+      '⌫' => DeletePressed(),
+      '=' => CalculateResult(),
+      '+/-' => ToggleSignPressed(),
+      '%' => PercentagePressed(),
+      '÷' || '×' || '-' || '+' => OperatorPressed(text),
+      _ => NumberPressed(text), // '_' acts as the 'else' / default case
+    };
+
+    bloc.add(event);
   }
 }
 

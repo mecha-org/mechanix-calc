@@ -62,10 +62,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       );
     } else {
       // Otherwise, just append the operator
-      emit(state.copyWith(
-        expression: state.expression + event.operator,
-        errorMessage: '',
-      ));
+      emit(
+        state.copyWith(
+          expression: state.expression + event.operator,
+          errorMessage: '',
+        ),
+      );
     }
   }
 
@@ -115,9 +117,14 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         return;
       }
 
-      String result = eval.toString();
-      if (result.endsWith('.0')) {
-        result = result.substring(0, result.length - 2);
+      String result;
+      if (eval == 0) {
+        result = '0';
+      } else {
+        result = eval.toString();
+        if (result.endsWith('.0')) {
+          result = result.substring(0, result.length - 2);
+        }
       }
 
       // Formatting for whole numbers
@@ -146,15 +153,11 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
     String expression = state.expression;
     if (expression.startsWith('-')) {
-      emit(state.copyWith(
-        expression: expression.substring(1),
-        errorMessage: '',
-      ));
+      emit(
+        state.copyWith(expression: expression.substring(1), errorMessage: ''),
+      );
     } else {
-      emit(state.copyWith(
-        expression: '-$expression',
-        errorMessage: '',
-      ));
+      emit(state.copyWith(expression: '-$expression', errorMessage: ''));
     }
   }
 
@@ -173,10 +176,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     ExpressionChanged event,
     Emitter<CalculatorState> emit,
   ) {
-    emit(state.copyWith(
-      expression: event.expression,
-      result: '',
-      errorMessage: '',
-    ));
+    emit(
+      state.copyWith(
+        expression: event.expression,
+        result: '',
+        errorMessage: '',
+      ),
+    );
   }
 }

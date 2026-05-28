@@ -1,16 +1,19 @@
 import 'package:equatable/equatable.dart';
 
-class HistoryItem {
+class HistoryItem extends Equatable {
   final String expression;
   final String result;
   final String displayResult; // pre-built, zero alloc during build()
   final String? errorMessage;
 
-  HistoryItem({
+  const HistoryItem({
     required this.expression,
     required this.result,
     this.errorMessage,
   }) : displayResult = errorMessage ?? '= $result';
+
+  @override
+  List<Object?> get props => [expression, result];
 }
 
 class CalculatorState extends Equatable {

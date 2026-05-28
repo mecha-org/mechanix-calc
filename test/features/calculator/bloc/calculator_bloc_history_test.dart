@@ -160,5 +160,62 @@ void main() {
       // Pressing AC should clear error message
       calculatorBloc.add(const ClearPressed());
     });
+    test(
+      'Multiplying a negative result by zero should yield 0 instead of -0',
+      () {
+        final expectedStates = [
+          // 1. Typing '10'
+          const CalculatorState(expression: '1', result: '0', history: []),
+          const CalculatorState(expression: '10', result: '0', history: []),
+          // 2. Pressing '-'
+          const CalculatorState(expression: '10-', result: '0', history: []),
+          // 3. Typing '20'
+          const CalculatorState(expression: '10-2', result: '0', history: []),
+          const CalculatorState(expression: '10-20', result: '0', history: []),
+          // 4. First calculation: 10 - 20 = -10
+          const CalculatorState(
+            expression: '',
+            result: '-10',
+            history: [HistoryItem(expression: '10-20', result: '-10')],
+          ),
+          // 5. Pressing '×' (FIXED: result is '' in your Bloc)
+          const CalculatorState(
+            expression: '-10×',
+            result: '', // Changed from '-10' to ''
+            history: [HistoryItem(expression: '10-20', result: '-10')],
+          ),
+          // 6. Typing '0' (FIXED: result is '' in your Bloc)
+          const CalculatorState(
+            expression: '-10×0',
+            result: '', // Changed from '-10' to ''
+            history: [HistoryItem(expression: '10-20', result: '-10')],
+          ),
+          // 7. Final calculation: -10 × 0 = 0
+          const CalculatorState(
+            expression: '',
+            result: '0',
+            history: [
+              HistoryItem(expression: '-10×0', result: '0'),
+              HistoryItem(expression: '10-20', result: '-10'),
+            ],
+          ),
+        ];
+
+        expectLater(calculatorBloc.stream, emitsInOrder(expectedStates));
+
+        // Execute sequence for '10 - 20 ='
+        calculatorBloc.add(const NumberPressed('1'));
+        calculatorBloc.add(const NumberPressed('0'));
+        calculatorBloc.add(const OperatorPressed('-'));
+        calculatorBloc.add(const NumberPressed('2'));
+        calculatorBloc.add(const NumberPressed('0'));
+        calculatorBloc.add(CalculateResult());
+
+        // Execute sequence for '× 0 ='
+        calculatorBloc.add(const OperatorPressed('×'));
+        calculatorBloc.add(const NumberPressed('0'));
+        calculatorBloc.add(CalculateResult());
+      },
+    );
   });
 }
