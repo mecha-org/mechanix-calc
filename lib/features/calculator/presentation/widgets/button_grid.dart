@@ -37,7 +37,7 @@ const List<CalculatorButtonItem> calculatorButtons = [
     event: PercentagePressed(),
   ),
   CalculatorButtonItem(
-    icon: CupertinoIcons.divide,
+    text: '÷',
     type: CalculatorButtonType.action,
     event: OperatorPressed('÷'),
   ),
@@ -47,7 +47,7 @@ const List<CalculatorButtonItem> calculatorButtons = [
   CalculatorButtonItem(text: '8', event: NumberPressed('8')),
   CalculatorButtonItem(text: '9', event: NumberPressed('9')),
   CalculatorButtonItem(
-    icon: CupertinoIcons.multiply,
+    text: '×',
     type: CalculatorButtonType.action,
     event: OperatorPressed('×'),
   ),
@@ -57,7 +57,7 @@ const List<CalculatorButtonItem> calculatorButtons = [
   CalculatorButtonItem(text: '5', event: NumberPressed('5')),
   CalculatorButtonItem(text: '6', event: NumberPressed('6')),
   CalculatorButtonItem(
-    icon: CupertinoIcons.minus,
+    text: '-',
     type: CalculatorButtonType.action,
     event: OperatorPressed('-'),
   ),
@@ -67,7 +67,7 @@ const List<CalculatorButtonItem> calculatorButtons = [
   CalculatorButtonItem(text: '2', event: NumberPressed('2')),
   CalculatorButtonItem(text: '3', event: NumberPressed('3')),
   CalculatorButtonItem(
-    icon: CupertinoIcons.plus,
+    text: '+',
     type: CalculatorButtonType.action,
     event: OperatorPressed('+'),
   ),
@@ -85,7 +85,7 @@ const List<CalculatorButtonItem> calculatorButtons = [
     type: CalculatorButtonType.action,
   ),
   CalculatorButtonItem(
-    icon: CupertinoIcons.equal,
+    text: '=',
     type: CalculatorButtonType.primary,
     event: CalculateResult(),
   ),

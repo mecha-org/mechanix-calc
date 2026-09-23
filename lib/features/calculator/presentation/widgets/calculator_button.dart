@@ -38,13 +38,12 @@ class CalculatorButton extends StatelessWidget {
       icon: icon,
       theme: const ButtonThemeDataConfig(padding: EdgeInsets.zero),
       labelText: text != null
-          ? (type == CalculatorButtonType.standard
+          ? (["AC", "+/-"].contains(text))
                 ? Text(
                     text!,
                     style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                       fontFamily: MechanixFontFamily.geistMono,
                       color: foregroundColor,
-                      fontSize: 32,
                     ),
                   )
                 : Text(
@@ -52,8 +51,9 @@ class CalculatorButton extends StatelessWidget {
                     style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                       fontFamily: MechanixFontFamily.geistMono,
                       color: foregroundColor,
+                      fontSize: 32,
                     ),
-                  ))
+                  )
           : null,
       backgroundColor: text == '.'
           ? colorScheme.surfaceContainer
