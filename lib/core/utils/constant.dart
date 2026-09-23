@@ -38,34 +38,12 @@ final Map<LogicalKeyboardKey, CalculatorEvent> logicalKeyboardKeyMap = {
   LogicalKeyboardKey.slash: const OperatorPressed('÷'),
   LogicalKeyboardKey.numpadDivide: const OperatorPressed('÷'),
 
-  LogicalKeyboardKey.percent: PercentagePressed(),
+  LogicalKeyboardKey.percent: const PercentagePressed(),
 
-  LogicalKeyboardKey.enter: CalculateResult(),
-  LogicalKeyboardKey.numpadEnter: CalculateResult(),
+  LogicalKeyboardKey.enter: const CalculateResult(),
+  LogicalKeyboardKey.numpadEnter: const CalculateResult(),
 
-  LogicalKeyboardKey.backspace: DeletePressed(),
+  LogicalKeyboardKey.backspace: const DeletePressed(),
   LogicalKeyboardKey.escape: const ClearPressed(),
 };
 
-final List<String> calcGridButtons = [
-  'AC',
-  '+/-',
-  '%',
-  '÷',
-  '7',
-  '8',
-  '9',
-  '×',
-  '4',
-  '5',
-  '6',
-  '-',
-  '1',
-  '2',
-  '3',
-  '+',
-  '⌫',
-  '0',
-  '.',
-  '=',
-];

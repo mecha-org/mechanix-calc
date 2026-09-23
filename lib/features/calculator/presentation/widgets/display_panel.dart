@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:mechanix_calculator/l10n/app_localizations.dart';
+import 'package:widgets/widgets.dart';
 import '../../bloc/calculator_state.dart';
 
-class DisplayPanel extends StatelessWidget {
+class DisplayPanel extends StatefulWidget {
   final String expression;
   final String result;
   final String errorMessage;
   final List<HistoryItem> history;
+  final bool isHistoryOpen;
   final ValueChanged<String>? onHistoryItemTap;
+  final VoidCallback? onDismissHistory;
 
   const DisplayPanel({
     super.key,
@@ -14,92 +18,159 @@ class DisplayPanel extends StatelessWidget {
     required this.result,
     required this.errorMessage,
     this.history = const [],
+    this.isHistoryOpen = false,
     this.onHistoryItemTap,
+    this.onDismissHistory,
   });
 
   @override
+  State<DisplayPanel> createState() => _DisplayPanelState();
+}
+
+class _DisplayPanelState extends State<DisplayPanel> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
+    final l10n = AppLocalizations.of(context);
+    final String topExpression;
+    final String bottomText;
+
+    if (widget.errorMessage.isNotEmpty) {
+      topExpression = widget.expression;
+      bottomText =
+          l10n?.errorMessage(widget.errorMessage) ?? widget.errorMessage;
+    } else if (widget.expression.isNotEmpty) {
+      topExpression = '';
+      bottomText = widget.expression;
+    } else if (widget.history.isNotEmpty &&
+        widget.history.first.result == widget.result) {
+      topExpression = widget.history.first.expression;
+      bottomText = widget.result.isNotEmpty ? widget.result : '0';
+    } else {
+      topExpression = '';
+      bottomText = widget.result.isNotEmpty ? widget.result : '0';
+    }
+
+    final displayContent = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      alignment: Alignment.bottomRight,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: RepaintBoundary(
-              // ← isolates list repaints
-              child: _HistoryList(
-                history: history,
-                onHistoryItemTap: onHistoryItemTap,
-              ),
-            ),
-          ),
-          if (errorMessage.isNotEmpty) ...[
-            // Show expression on top when there is an error
-            Text(
-              expression,
-              softWrap: true,
-              overflow: TextOverflow.visible,
-              style: const TextStyle(
-                fontSize: 50,
-                fontWeight: FontWeight.w400,
-                color: Colors.white,
+          if (topExpression.isNotEmpty && !widget.isHistoryOpen) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                topExpression,
+                textAlign: TextAlign.end,
+                softWrap: true,
+                overflow: TextOverflow.visible,
+                style: Theme.of(context).textTheme.titleSmall!.copyWith(
+                  fontFamily: MechanixFontFamily.geistMono,
+                  fontSize: 18,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            // Show error message below in red and smaller font
-            Text(
-              errorMessage,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w400,
-                color: Colors.white,
-              ),
+          ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              bottomText,
+              textAlign: TextAlign.end,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+              style: Theme.of(
+                context,
+              ).textTheme.displayMedium!.copyWith(fontFamily: 'GeistMono'),
             ),
-          ] else
-            // Default behavior: show expression or result
-            Text(
-              expression.isNotEmpty ? expression : result,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.clip,
-              style: const TextStyle(
-                fontSize: 50,
-                fontWeight: FontWeight.w400,
-                color: Colors.white,
-              ),
-            ),
+          ),
         ],
+      ),
+    );
+
+    if (widget.isHistoryOpen) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: HistoryOverlay(
+              history: widget.history,
+              onHistoryItemTap: widget.onHistoryItemTap,
+            ),
+          ),
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: widget.onDismissHistory,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 64),
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  reverse: true,
+                  child: displayContent,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: widget.onDismissHistory,
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          reverse: true,
+          child: displayContent,
+        ),
       ),
     );
   }
 }
 
-// Extract this as a separate widget
-class _HistoryList extends StatelessWidget {
+class HistoryOverlay extends StatelessWidget {
   final List<HistoryItem> history;
   final ValueChanged<String>? onHistoryItemTap;
 
-  const _HistoryList({required this.history, this.onHistoryItemTap});
+  const HistoryOverlay({
+    super.key,
+    required this.history,
+    this.onHistoryItemTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      reverse: true,
-      padding: const EdgeInsets.only(bottom: 16),
-      itemCount: history.length,
-      separatorBuilder: (_, __) =>
-          const Divider(color: Colors.white10, height: 1),
-      itemBuilder: (context, index) {
-        final item = history[index];
-        return _HistoryTile(item: item, onTap: onHistoryItemTap);
-      },
+    final items = history.reversed.toList();
+
+    return Container(
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _HistoryTile(item: item, onTap: onHistoryItemTap);
+        },
+      ),
     );
   }
 }
 
-// Also extract the tile
 class _HistoryTile extends StatelessWidget {
   final HistoryItem item;
   final ValueChanged<String>? onTap;
@@ -108,16 +179,18 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const textStyle = TextStyle(fontSize: 24, fontWeight: FontWeight.w400);
+    final textStyle = Theme.of(context).textTheme.titleSmall!.copyWith(
+      fontFamily: MechanixFontFamily.geistMono,
+      fontSize: 18,
+      color: Theme.of(context).colorScheme.onSecondaryContainer,
+    );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
+    return InkWell(
       onTap: () => onTap?.call(item.expression),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           children: [
-            // 1. Expression side (Left-aligned)
             Expanded(
               flex: 3,
               child: Text(
@@ -128,17 +201,10 @@ class _HistoryTile extends StatelessWidget {
                 style: textStyle,
               ),
             ),
-
-            // 2. The Equals sign (Fixed width/centered)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                '=',
-                style: TextStyle(fontSize: 24, color: Colors.grey),
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text('=', style: textStyle.copyWith(fontSize: 24)),
             ),
-
-            // 3. Result side (Right-aligned)
             Expanded(
               flex: 2,
               child: Text(
@@ -147,7 +213,9 @@ class _HistoryTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.fade,
                 softWrap: false,
-                style: textStyle.copyWith(color: Colors.white),
+                style: textStyle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ],

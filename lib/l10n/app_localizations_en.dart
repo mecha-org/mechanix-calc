@@ -10,4 +10,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calculator => 'Calculator';
+
+  @override
+  String errorMessage(String message) {
+    return '$message';
+  }
 }

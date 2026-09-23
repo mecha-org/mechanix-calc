@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -15,11 +16,11 @@ void main() {
       // Find buttons and tap them
       await tester.tap(find.text('1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('+'));
+      await tester.tap(find.byIcon(CupertinoIcons.plus));
       await tester.pumpAndSettle();
       await tester.tap(find.text('2'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('='));
+      await tester.tap(find.byIcon(CupertinoIcons.equal));
       await tester.pumpAndSettle();
 
       // Verify the result (specifically in the main display, with larger font)
@@ -82,17 +83,17 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('+'));
+      await tester.tap(find.byIcon(CupertinoIcons.plus));
       await tester.pumpAndSettle();
       await tester.tap(find.text('2'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('×'));
+      await tester.tap(find.byIcon(CupertinoIcons.multiply));
       await tester.pumpAndSettle();
       await tester.tap(find.text('3'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('='));
+      await tester.tap(find.byIcon(CupertinoIcons.equal));
       await tester.pumpAndSettle();
 
       // 10 + (20 * 3) = 70 (assuming standard operator precedence)
@@ -111,11 +112,11 @@ void main() {
 
       await tester.tap(find.text('5'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('÷'));
+      await tester.tap(find.byIcon(CupertinoIcons.divide));
       await tester.pumpAndSettle();
       await tester.tap(find.text('0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('='));
+      await tester.tap(find.byIcon(CupertinoIcons.equal));
       await tester.pumpAndSettle();
 
       // Should show the error message
@@ -130,9 +131,9 @@ void main() {
 
       await tester.tap(find.text('5'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('+'));
+      await tester.tap(find.byIcon(CupertinoIcons.plus));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('='));
+      await tester.tap(find.byIcon(CupertinoIcons.equal));
       await tester.pumpAndSettle();
 
       // Should show the error message

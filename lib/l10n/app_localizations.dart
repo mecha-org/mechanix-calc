@@ -94,11 +94,17 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en')];
 
-  /// No description provided for @calculator.
+  /// Title of the calculator application
   ///
   /// In en, this message translates to:
   /// **'Calculator'**
   String get calculator;
+
+  /// Error message displayed by the calculator
+  ///
+  /// In en, this message translates to:
+  /// **'{message}'**
+  String errorMessage(String message);
 }
 
 class _AppLocalizationsDelegate

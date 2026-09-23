@@ -1,45 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:widgets/widgets.dart';
+
+enum CalculatorButtonType { standard, action, primary }
 
 class CalculatorButton extends StatelessWidget {
-  final String text;
+  final String? text;
   final IconData? icon;
   final VoidCallback onTap;
-  final Color? color;
-  final Color? textColor;
+  final CalculatorButtonType type;
 
   const CalculatorButton({
     super.key,
-    required this.text,
+    this.text,
     this.icon,
     required this.onTap,
-    this.color,
-    this.textColor,
+    this.type = CalculatorButtonType.standard,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 0.5),
-        color: color ?? const Color(0xFF1A1A1A),
-      ),
-      margin: const EdgeInsets.all(0),
-      child: icon != null
-          ? IconButton(
-              onPressed: onTap,
-              icon: Icon(icon, color: textColor ?? Colors.white),
-            )
-          : TextButton(
-              onPressed: onTap,
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontSize: 28,
-                  color: textColor ?? Colors.white,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-            ),
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = switch (type) {
+      CalculatorButtonType.primary => colorScheme.primary,
+      CalculatorButtonType.action => colorScheme.surfaceContainer,
+      CalculatorButtonType.standard => colorScheme.surfaceContainerHigh,
+    };
+    final foregroundColor = switch (type) {
+      CalculatorButtonType.primary => colorScheme.onPrimary,
+      CalculatorButtonType.action => colorScheme.onSecondaryContainer,
+      CalculatorButtonType.standard => colorScheme.onSurface,
+    };
+
+    return MechanixButton(
+      onPressed: onTap,
+      widthSizing: ButtonLayoutSizing.fill,
+      heightSizing: ButtonLayoutSizing.fill,
+      icon: icon,
+      theme: const ButtonThemeDataConfig(padding: EdgeInsets.zero),
+      labelText: text != null
+          ? (type == CalculatorButtonType.standard
+                ? Text(
+                    text!,
+                    style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                      fontFamily: MechanixFontFamily.geistMono,
+                      color: foregroundColor,
+                      fontSize: 32,
+                    ),
+                  )
+                : Text(
+                    text!,
+                    style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                      fontFamily: MechanixFontFamily.geistMono,
+                      color: foregroundColor,
+                    ),
+                  ))
+          : null,
+      backgroundColor: text == '.'
+          ? colorScheme.surfaceContainer
+          : backgroundColor,
+      foregroundColor: foregroundColor,
     );
   }
 }

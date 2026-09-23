@@ -1,3 +1,15 @@
 {
-  "calculator": "Calculator"
+  "calculator": "Calculator",
+  "@calculator": {
+    "description": "Title of the calculator application"
+  },
+  "errorMessage": "{message}",
+  "@errorMessage": {
+    "description": "Error message displayed by the calculator",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -3,6 +3,7 @@ import 'package:mechanix_calculator/features/calculator/presentation/widgets/but
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:widgets/widgets.dart';
 import '../../bloc/calculator_bloc.dart';
 import '../../bloc/calculator_event.dart';
 import '../../bloc/calculator_state.dart';
@@ -17,6 +18,7 @@ class CalculatorScreen extends StatefulWidget {
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
   final FocusNode _focusNode = FocusNode();
+  bool _isHistoryOpen = false;
 
   @override
   void dispose() {
@@ -26,6 +28,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   void _handleKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) return;
+
+    if (_isHistoryOpen && event.logicalKey == LogicalKeyboardKey.escape) {
+      setState(() {
+        _isHistoryOpen = false;
+      });
+      return;
+    }
 
     final bloc = context.read<CalculatorBloc>();
     final key = event.logicalKey;
@@ -45,36 +54,78 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: KeyboardListener(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: _handleKeyEvent,
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: BlocBuilder<CalculatorBloc, CalculatorState>(
-                  builder: (context, state) {
-                    return DisplayPanel(
+    return BlocBuilder<CalculatorBloc, CalculatorState>(
+      builder: (context, state) {
+        final hasHistory = state.history.isNotEmpty;
+        final isHistoryOpen = _isHistoryOpen && hasHistory;
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+          appBar: MechanixAppBar.small(
+            backgroundColor: isHistoryOpen
+                ? Theme.of(context).colorScheme.surfaceContainerLow
+                : Colors.transparent,
+            actions: [
+              MechanixIconButton.standard(
+                onPressed: hasHistory
+                    ? () {
+                        setState(() {
+                          _isHistoryOpen = !isHistoryOpen;
+                        });
+                      }
+                    : null,
+                icon: Icon(isHistoryOpen ? Icons.close : Icons.history),
+              ),
+            ],
+          ),
+          body: KeyboardListener(
+            focusNode: _focusNode,
+            autofocus: true,
+            onKeyEvent: _handleKeyEvent,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: DisplayPanel(
                       expression: state.expression,
                       result: state.result,
                       errorMessage: state.errorMessage,
                       history: state.history,
+                      isHistoryOpen: isHistoryOpen,
+                      onDismissHistory: () {
+                        setState(() {
+                          _isHistoryOpen = false;
+                        });
+                      },
                       onHistoryItemTap: (expr) {
                         context.read<CalculatorBloc>().add(
                           ExpressionChanged(expr),
                         );
+                        setState(() {
+                          _isHistoryOpen = false;
+                        });
                       },
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 304,
+                    child: Listener(
+                      onPointerDown: (_) {
+                        if (_isHistoryOpen) {
+                          setState(() {
+                            _isHistoryOpen = false;
+                          });
+                        }
+                      },
+                      child: const ButtonGrid(),
+                    ),
+                  ),
+                ],
               ),
-              const Expanded(child: ButtonGrid()),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

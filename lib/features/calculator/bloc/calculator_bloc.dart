@@ -127,6 +127,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
           .replaceAll('×', '*')
           .replaceAll('÷', '/');
 
+      // Convert percentage values to division by 100 for evaluation.
+      finalExpression = finalExpression.replaceAllMapped(
+        RegExp(r'(\d+(?:\.\d+)?)%'),
+        (match) => '(${match[1]}/100)',
+      );
+
       GrammarParser p = GrammarParser();
       Expression exp = p.parse(finalExpression);
       ContextModel cm = ContextModel();

@@ -35,10 +35,19 @@ class ClearPressed extends CalculatorEvent {
   const ClearPressed();
 }
 
-class DeletePressed extends CalculatorEvent {}
+class DeletePressed extends CalculatorEvent {
+  const DeletePressed();
+}
 
-class CalculateResult extends CalculatorEvent {}
+class CalculateResult extends CalculatorEvent {
+  const CalculateResult();
+}
 
-class ToggleSignPressed extends CalculatorEvent {}
+class ToggleSignPressed extends CalculatorEvent {
+  const ToggleSignPressed();
+}
 
-class PercentagePressed extends CalculatorEvent {}
+class PercentagePressed extends CalculatorEvent {
+  const PercentagePressed();
+}
+
