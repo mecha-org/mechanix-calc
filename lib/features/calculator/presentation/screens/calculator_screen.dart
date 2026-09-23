@@ -54,39 +54,46 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CalculatorBloc, CalculatorState>(
-      builder: (context, state) {
-        final hasHistory = state.history.isNotEmpty;
-        final isHistoryOpen = _isHistoryOpen && hasHistory;
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      appBar: MechanixAppBar.small(
+        backgroundColor: _isHistoryOpen
+            ? Theme.of(context).colorScheme.surfaceContainerLow
+            : Colors.transparent,
+        actions: [
+          BlocSelector<CalculatorBloc, CalculatorState, bool>(
+            selector: (state) => state.history.isNotEmpty,
+            builder: (context, hasHistory) {
+              final isHistoryOpen = _isHistoryOpen && hasHistory;
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-          appBar: MechanixAppBar.small(
-            backgroundColor: isHistoryOpen
-                ? Theme.of(context).colorScheme.surfaceContainerLow
-                : Colors.transparent,
-            actions: [
-              MechanixIconButton.standard(
+              return MechanixIconButton.standard(
                 onPressed: hasHistory
                     ? () {
                         setState(() {
-                          _isHistoryOpen = !isHistoryOpen;
+                          _isHistoryOpen = !_isHistoryOpen;
                         });
                       }
                     : null,
                 icon: Icon(isHistoryOpen ? Icons.close : Icons.history),
-              ),
-            ],
+              );
+            },
           ),
-          body: KeyboardListener(
-            focusNode: _focusNode,
-            autofocus: true,
-            onKeyEvent: _handleKeyEvent,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: DisplayPanel(
+        ],
+      ),
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: BlocBuilder<CalculatorBloc, CalculatorState>(
+                  builder: (context, state) {
+                    final isHistoryOpen =
+                        _isHistoryOpen && state.history.isNotEmpty;
+
+                    return DisplayPanel(
                       expression: state.expression,
                       result: state.result,
                       errorMessage: state.errorMessage,
@@ -105,27 +112,27 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           _isHistoryOpen = false;
                         });
                       },
-                    ),
-                  ),
-                  SizedBox(
-                    height: 304,
-                    child: Listener(
-                      onPointerDown: (_) {
-                        if (_isHistoryOpen) {
-                          setState(() {
-                            _isHistoryOpen = false;
-                          });
-                        }
-                      },
-                      child: const ButtonGrid(),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
+              SizedBox(
+                height: 304,
+                child: Listener(
+                  onPointerDown: (_) {
+                    if (_isHistoryOpen) {
+                      setState(() {
+                        _isHistoryOpen = false;
+                      });
+                    }
+                  },
+                  child: const ButtonGrid(),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

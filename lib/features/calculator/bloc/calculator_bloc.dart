@@ -15,6 +15,11 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     on<ExpressionChanged>(_onExpressionChanged);
   }
 
+  static final _percentPattern = RegExp(r'(\d+(?:\.\d+)?)%');
+  static final _numberFormattingPattern = RegExp(
+    r'(\d{1,3})(?=(\d{3})+(?!\d))',
+  );
+
   void _onNumberPressed(NumberPressed event, Emitter<CalculatorState> emit) {
     String newExpression = state.expression;
 
@@ -129,7 +134,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
       // Convert percentage values to division by 100 for evaluation.
       finalExpression = finalExpression.replaceAllMapped(
-        RegExp(r'(\d+(?:\.\d+)?)%'),
+        _percentPattern,
         (match) => '(${match[1]}/100)',
       );
 
@@ -161,8 +166,10 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
       // Formatting for whole numbers
       if (result.length > 3 && !result.contains('.')) {
-        RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-        result = result.replaceAllMapped(reg, (Match m) => '${m[1]},');
+        result = result.replaceAllMapped(
+          _numberFormattingPattern,
+          (match) => '${match[1]},',
+        );
       }
 
       final updatedHistory = List<HistoryItem>.from(state.history)
