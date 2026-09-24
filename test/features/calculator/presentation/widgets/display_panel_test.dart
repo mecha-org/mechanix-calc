@@ -88,6 +88,25 @@ void main() {
       expect(find.text('Invalid mathematical operation'), findsOneWidget);
     });
 
+    testWidgets('shows expression and Maximum length reached when limit is hit',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DisplayPanel(
+              expression: '12345',
+              result: '',
+              errorMessage: 'Maximum length reached',
+              history: [],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('12345'), findsOneWidget);
+      expect(find.text('Maximum length reached'), findsOneWidget);
+    });
+
     testWidgets('shows active expression when typing', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

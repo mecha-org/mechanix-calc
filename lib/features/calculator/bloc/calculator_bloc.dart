@@ -4,6 +4,10 @@ import 'calculator_event.dart';
 import 'calculator_state.dart';
 
 class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
+  static const int maxCharacters = 200;
+  static const int maxOperations = 40;
+  static const String maxLimitErrorMessage = 'Maximum length reached';
+
   CalculatorBloc() : super(const CalculatorState()) {
     on<NumberPressed>(_onNumberPressed);
     on<OperatorPressed>(_onOperatorPressed);
@@ -20,7 +24,34 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     r'(\d{1,3})(?=(\d{3})+(?!\d))',
   );
 
+  static int _countOperations(String expression) {
+    if (expression.isEmpty) return 0;
+    int count = 0;
+    for (int i = 0; i < expression.length; i++) {
+      final char = expression[i];
+      if (char == '+' ||
+          char == '×' ||
+          char == '÷' ||
+          char == '%' ||
+          char == '*' ||
+          char == '/') {
+        count++;
+      } else if (char == '-') {
+        if (i > 0) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
   void _onNumberPressed(NumberPressed event, Emitter<CalculatorState> emit) {
+    if (state.expression.length >= maxCharacters ||
+        _countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+      return;
+    }
+
     String newExpression = state.expression;
 
     // 1. Handle decimal point press
@@ -46,6 +77,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       }
     }
 
+    if (newExpression.length > maxCharacters ||
+        _countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+      return;
+    }
+
     emit(state.copyWith(expression: newExpression, errorMessage: ''));
   }
 
@@ -67,39 +104,44 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       // If we have a result from a previous calculation, start the new expression with it.
       // Example: result is "30". Pressing '+' makes expression "30+"
       if (state.result.isNotEmpty) {
-        emit(
-          state.copyWith(
-            expression: state.result + event.operator,
-            result:
-                '', // Optional: clear the result so it doesn't linger awkwardly
-          ),
-        );
+        final newExpr = state.result + event.operator;
+        if (newExpr.length > maxCharacters ||
+            _countOperations(newExpr) > maxOperations) {
+          emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+          return;
+        }
+        emit(state.copyWith(expression: newExpr, result: '', errorMessage: ''));
       }
+      return;
+    }
+
+    if (state.expression.length >= maxCharacters ||
+        _countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
       return;
     }
 
     // 2. Handle the case where the expression is NOT empty
     String lastChar = state.expression.substring(state.expression.length - 1);
+    String newExpression;
 
     // If the last character is already an operator, replace it
     if (operators.contains(lastChar)) {
-      emit(
-        state.copyWith(
-          expression:
-              state.expression.substring(0, state.expression.length - 1) +
-              event.operator,
-          errorMessage: '',
-        ),
-      );
+      newExpression =
+          state.expression.substring(0, state.expression.length - 1) +
+          event.operator;
     } else {
       // Otherwise, just append the operator
-      emit(
-        state.copyWith(
-          expression: state.expression + event.operator,
-          errorMessage: '',
-        ),
-      );
+      newExpression = state.expression + event.operator;
     }
+
+    if (newExpression.length > maxCharacters ||
+        _countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+      return;
+    }
+
+    emit(state.copyWith(expression: newExpression, errorMessage: ''));
   }
 
   void _onClearPressed(ClearPressed event, Emitter<CalculatorState> emit) {
@@ -176,7 +218,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         ..insert(0, HistoryItem(expression: state.expression, result: result));
 
       emit(
-        state.copyWith(expression: "", result: result, history: updatedHistory),
+        state.copyWith(
+          expression: "",
+          result: result,
+          history: updatedHistory,
+          errorMessage: '',
+        ),
       );
     } catch (e) {
       // Catch syntax errors (e.g., malformed expressions like "5++5")
@@ -196,7 +243,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         state.copyWith(expression: expression.substring(1), errorMessage: ''),
       );
     } else {
-      emit(state.copyWith(expression: '-$expression', errorMessage: ''));
+      final newExpression = '-$expression';
+      if (newExpression.length > maxCharacters) {
+        emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+        return;
+      }
+      emit(state.copyWith(expression: newExpression, errorMessage: ''));
     }
   }
 
@@ -205,10 +257,18 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     Emitter<CalculatorState> emit,
   ) {
     if (state.expression.isEmpty) return;
-    emit(state.copyWith(expression: '${state.expression}%', errorMessage: ''));
-    // Usually percentage divides by 100, but often in calculators it acts as an operator or immediate transform.
-    // For simplicity here, we add the symbol and the parser might need to handle it or we handle it during evaluation.
-    // math_expressions might not handle % natively as "divide by 100" in all contexts without custom setup.
+    if (state.expression.length >= maxCharacters ||
+        _countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+      return;
+    }
+    final newExpression = '${state.expression}%';
+    if (newExpression.length > maxCharacters ||
+        _countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+      return;
+    }
+    emit(state.copyWith(expression: newExpression, errorMessage: ''));
   }
 
   void _onExpressionChanged(

@@ -499,5 +499,118 @@ void main() {
         calculatorBloc.add(const ExpressionChanged('15+25'));
       });
     });
+
+    group('Limits: 40 Operations and 100 Characters', () {
+      test('40 operations limit locks calculator and shows Maximum length reached', () async {
+        // Build 39 operations: "1+1+1...+1" (39 pluses)
+        for (int i = 0; i < 39; i++) {
+          calculatorBloc.add(const NumberPressed('1'));
+          calculatorBloc.add(const OperatorPressed('+'));
+        }
+        calculatorBloc.add(const NumberPressed('1'));
+        // 40th operation (40th plus sign)
+        calculatorBloc.add(const OperatorPressed('+'));
+
+        await pumpEventQueue();
+
+        // 40 operations present in expression
+        expect(calculatorBloc.state.errorMessage, '');
+        final exprWith40Ops = calculatorBloc.state.expression;
+
+        // Trying to type another number or operator should be blocked and show error
+        calculatorBloc.add(const NumberPressed('1'));
+        await pumpEventQueue();
+        expect(calculatorBloc.state.expression, exprWith40Ops);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+
+        // Trying to type another operator is also blocked
+        calculatorBloc.add(const OperatorPressed('+'));
+        await pumpEventQueue();
+        expect(calculatorBloc.state.expression, exprWith40Ops);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+
+        // Deleting the 40th plus allows typing again and clears error
+        calculatorBloc.add(const DeletePressed());
+        await pumpEventQueue();
+        expect(calculatorBloc.state.errorMessage, '');
+
+        // Now can type number and 40th operator again
+        calculatorBloc.add(const NumberPressed('5'));
+        await pumpEventQueue();
+        expect(calculatorBloc.state.expression.endsWith('5'), isTrue);
+        expect(calculatorBloc.state.errorMessage, '');
+      });
+
+      test('100 characters limit blocks further typing and shows Maximum length reached', () async {
+        // Type 100 single-digit numbers
+        for (int i = 0; i < 100; i++) {
+          calculatorBloc.add(const NumberPressed('1'));
+        }
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.errorMessage, '');
+
+        // Typing 101st character should be blocked and show error
+        calculatorBloc.add(const NumberPressed('2'));
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+
+        // Adding an operator at 100 characters is also blocked
+        calculatorBloc.add(const OperatorPressed('+'));
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+
+        // Deleting one character clears error and allows typing up to 100 again
+        calculatorBloc.add(const DeletePressed());
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 99);
+        expect(calculatorBloc.state.errorMessage, '');
+
+        calculatorBloc.add(const NumberPressed('9'));
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.expression.endsWith('9'), isTrue);
+        expect(calculatorBloc.state.errorMessage, '');
+      });
+
+      test('ToggleSignPressed respects 100 characters limit', () async {
+        // Type 100 characters
+        for (int i = 0; i < 100; i++) {
+          calculatorBloc.add(const NumberPressed('5'));
+        }
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+
+        // Toggling sign would make it 101 characters, so it should be blocked
+        calculatorBloc.add(const ToggleSignPressed());
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.expression.startsWith('-'), isFalse);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+      });
+
+      test('PercentagePressed respects 100 characters and 40 operations limit', () async {
+        // Type 100 characters
+        for (int i = 0; i < 100; i++) {
+          calculatorBloc.add(const NumberPressed('5'));
+        }
+        await pumpEventQueue();
+
+        calculatorBloc.add(const PercentagePressed());
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression.length, 100);
+        expect(calculatorBloc.state.errorMessage, 'Maximum length reached');
+      });
+    });
   });
 }
