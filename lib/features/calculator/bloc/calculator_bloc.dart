@@ -1,13 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:math_expressions/math_expressions.dart';
+import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'calculator_event.dart';
 import 'calculator_state.dart';
 
 class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
-  static const int maxCharacters = 200;
-  static const int maxOperations = 40;
-  static const String maxLimitErrorMessage = 'Maximum length reached';
-
   CalculatorBloc() : super(const CalculatorState()) {
     on<NumberPressed>(_onNumberPressed);
     on<OperatorPressed>(_onOperatorPressed);
@@ -45,10 +42,40 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     return count;
   }
 
+  static bool _hasNumberExceedingMaxDigits(String expression) {
+    final segments = expression.split(RegExp(r'[+\-×÷%]'));
+    for (final segment in segments) {
+      final digits = segment.replaceAll(RegExp(r'\D'), '');
+      if (digits.length > maxDigits) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _onNumberPressed(NumberPressed event, Emitter<CalculatorState> emit) {
-    if (state.expression.length >= maxCharacters ||
-        _countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (state.expression.length >= maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+
+    if (_countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
+      return;
+    }
+
+    final currentSegments = state.expression.split(RegExp(r'[+\-×÷%]'));
+    final currentSegment = currentSegments.isNotEmpty
+        ? currentSegments.last
+        : '';
+    final currentDigitCount = currentSegment
+        .replaceAll(RegExp(r'\D'), '')
+        .length;
+
+    if (event.number != '.' &&
+        currentSegment != '0' &&
+        currentDigitCount >= maxDigits) {
+      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
       return;
     }
 
@@ -77,9 +104,18 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       }
     }
 
-    if (newExpression.length > maxCharacters ||
-        _countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (newExpression.length > maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+
+    if (_countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
+      return;
+    }
+
+    if (_hasNumberExceedingMaxDigits(newExpression)) {
+      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
       return;
     }
 
@@ -105,9 +141,16 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       // Example: result is "30". Pressing '+' makes expression "30+"
       if (state.result.isNotEmpty) {
         final newExpr = state.result + event.operator;
-        if (newExpr.length > maxCharacters ||
-            _countOperations(newExpr) > maxOperations) {
-          emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+        if (newExpr.length > maxCharacters) {
+          emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+          return;
+        }
+        if (_countOperations(newExpr) > maxOperations) {
+          emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
+          return;
+        }
+        if (_hasNumberExceedingMaxDigits(newExpr)) {
+          emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
           return;
         }
         emit(state.copyWith(expression: newExpr, result: '', errorMessage: ''));
@@ -115,9 +158,13 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       return;
     }
 
-    if (state.expression.length >= maxCharacters ||
-        _countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (state.expression.length >= maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+
+    if (_countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
       return;
     }
 
@@ -135,9 +182,18 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       newExpression = state.expression + event.operator;
     }
 
-    if (newExpression.length > maxCharacters ||
-        _countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (newExpression.length > maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+
+    if (_countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
+      return;
+    }
+
+    if (_hasNumberExceedingMaxDigits(newExpression)) {
+      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
       return;
     }
 
@@ -190,7 +246,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         emit(
           state.copyWith(
             result: '',
-            errorMessage: 'Invalid mathematical operation',
+            errorMessage: invalidOperationsErrorMessage,
           ),
         );
         return;
@@ -227,7 +283,9 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       );
     } catch (e) {
       // Catch syntax errors (e.g., malformed expressions like "5++5")
-      emit(state.copyWith(result: '', errorMessage: 'Malformed expressions'));
+      emit(
+        state.copyWith(result: '', errorMessage: invalidOperationsErrorMessage),
+      );
     }
   }
 
@@ -245,7 +303,11 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     } else {
       final newExpression = '-$expression';
       if (newExpression.length > maxCharacters) {
-        emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+        emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+        return;
+      }
+      if (_hasNumberExceedingMaxDigits(newExpression)) {
+        emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
         return;
       }
       emit(state.copyWith(expression: newExpression, errorMessage: ''));
@@ -257,15 +319,21 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     Emitter<CalculatorState> emit,
   ) {
     if (state.expression.isEmpty) return;
-    if (state.expression.length >= maxCharacters ||
-        _countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (state.expression.length >= maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+    if (_countOperations(state.expression) >= maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
       return;
     }
     final newExpression = '${state.expression}%';
-    if (newExpression.length > maxCharacters ||
-        _countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxLimitErrorMessage));
+    if (newExpression.length > maxCharacters) {
+      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+      return;
+    }
+    if (_countOperations(newExpression) > maxOperations) {
+      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
       return;
     }
     emit(state.copyWith(expression: newExpression, errorMessage: ''));

@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/l10n/app_localizations.dart';
 import 'package:widgets/widgets.dart';
 import '../../bloc/calculator_state.dart';
@@ -37,12 +40,33 @@ class _DisplayPanelState extends State<DisplayPanel> {
   }
 
   @override
+  void didUpdateWidget(covariant DisplayPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.errorMessage.isNotEmpty &&
+        widget.errorMessage != oldWidget.errorMessage &&
+        widget.errorMessage != invalidOperationsErrorMessage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        final l10n = AppLocalizations.of(context);
+
+        MechanixSnackbar.text(
+          text: l10n?.errorMessage(widget.errorMessage) ?? widget.errorMessage,
+          position: MechanixSnackbarPosition.top,
+        ).show(context);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final String topExpression;
     final String bottomText;
 
-    if (widget.errorMessage.isNotEmpty) {
+    if (widget.errorMessage.isNotEmpty &&
+        widget.errorMessage == invalidOperationsErrorMessage) {
       topExpression = widget.expression;
       bottomText =
           l10n?.errorMessage(widget.errorMessage) ?? widget.errorMessage;
@@ -112,15 +136,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
             onTap: widget.onDismissHistory,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 64),
-              child: Scrollbar(
-                controller: _scrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  reverse: true,
-                  child: displayContent,
-                ),
-              ),
+              child: SingleChildScrollView(child: displayContent),
             ),
           ),
         ],
@@ -132,17 +148,22 @@ class _DisplayPanelState extends State<DisplayPanel> {
       child: Scrollbar(
         controller: _scrollController,
         thumbVisibility: true,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          reverse: true,
-          child: displayContent,
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+          ),
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            reverse: true,
+            child: displayContent,
+          ),
         ),
       ),
     );
   }
 }
 
-class HistoryOverlay extends StatelessWidget {
+class HistoryOverlay extends StatefulWidget {
   final List<HistoryItem> history;
   final ValueChanged<String>? onHistoryItemTap;
 
@@ -153,19 +174,65 @@ class HistoryOverlay extends StatelessWidget {
   });
 
   @override
+  State<HistoryOverlay> createState() => _HistoryOverlayState();
+}
+
+class _HistoryOverlayState extends State<HistoryOverlay> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HistoryOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.history != oldWidget.history) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    if (!mounted || !_scrollController.hasClients) return;
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final items = history.reversed.toList();
+    final items = widget.history.reversed.toList();
 
     return Container(
       width: double.infinity,
       color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 8),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return _HistoryTile(item: item, onTap: onHistoryItemTap);
-        },
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+          ),
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
+            },
+          ),
+        ),
       ),
     );
   }
@@ -211,7 +278,7 @@ class _HistoryTile extends StatelessWidget {
                 item.result,
                 textAlign: TextAlign.end,
                 maxLines: 1,
-                overflow: TextOverflow.fade,
+                overflow: TextOverflow.ellipsis,
                 softWrap: false,
                 style: textStyle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,

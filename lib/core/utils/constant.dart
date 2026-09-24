@@ -47,3 +47,12 @@ final Map<LogicalKeyboardKey, CalculatorEvent> logicalKeyboardKeyMap = {
   LogicalKeyboardKey.escape: const ClearPressed(),
 };
 
+const int maxCharacters = 100;
+const int maxOperations = 20;
+const int maxDigits = 15;
+
+const String maxDigitsErrorMessage = "Can't enter more than 15 digits";
+const String maxCharactersErrorMessage = "Can't enter more than 100 characters";
+const String maxOperationsErrorMessage = "Can't enter more than 20 operations";
+
+const String invalidOperationsErrorMessage = "Error";

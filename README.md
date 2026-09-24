@@ -25,7 +25,7 @@ A modern, functional calculator app built with Flutter Elinux for Mechanix OS. I
 
 2. Navigate to the project directory:
    ```bash
-   cd calculator
+   cd mechanix-calc
    ```
 3. Get dependencies:
    ```bash

@@ -345,7 +345,7 @@ packages:
     description:
       path: widgets
       ref: pre-release
-      resolved-ref: "078620f869bd0b344bc4454144e8ae54603df91d"
+      resolved-ref: c6fcea877aade1687b7d38ba84b684b44c4d1e73
       url: "https://github.com/mecha-org/mechanix.dart.git"
     source: git
     version: "0.0.1"
