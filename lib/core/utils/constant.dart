@@ -1,50 +1,150 @@
-import 'package:mechanix_calculator/features/calculator/bloc/calculator_event.dart';
 import 'package:flutter/services.dart';
+import 'package:mechanix_calculator/features/calculator/presentation/widgets/button_grid.dart';
 
-final Map<LogicalKeyboardKey, CalculatorEvent> logicalKeyboardKeyMap = {
-  LogicalKeyboardKey.digit0: const NumberPressed('0'),
-  LogicalKeyboardKey.numpad0: const NumberPressed('0'),
-  LogicalKeyboardKey.digit1: const NumberPressed('1'),
-  LogicalKeyboardKey.numpad1: const NumberPressed('1'),
-  LogicalKeyboardKey.digit2: const NumberPressed('2'),
-  LogicalKeyboardKey.numpad2: const NumberPressed('2'),
-  LogicalKeyboardKey.digit3: const NumberPressed('3'),
-  LogicalKeyboardKey.numpad3: const NumberPressed('3'),
-  LogicalKeyboardKey.digit4: const NumberPressed('4'),
-  LogicalKeyboardKey.numpad4: const NumberPressed('4'),
-  LogicalKeyboardKey.digit5: const NumberPressed('5'),
-  LogicalKeyboardKey.numpad5: const NumberPressed('5'),
-  LogicalKeyboardKey.digit6: const NumberPressed('6'),
-  LogicalKeyboardKey.numpad6: const NumberPressed('6'),
-  LogicalKeyboardKey.digit7: const NumberPressed('7'),
-  LogicalKeyboardKey.numpad7: const NumberPressed('7'),
-  LogicalKeyboardKey.digit8: const NumberPressed('8'),
-  LogicalKeyboardKey.numpad8: const NumberPressed('8'),
-  LogicalKeyboardKey.digit9: const NumberPressed('9'),
-  LogicalKeyboardKey.numpad9: const NumberPressed('9'),
+final Map<LogicalKeyboardKey, CalculatorButtonData> logicalKeyboardKeyMap = {
+  LogicalKeyboardKey.digit0: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '0',
+  ),
+  LogicalKeyboardKey.numpad0: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '0',
+  ),
+  LogicalKeyboardKey.digit1: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '1',
+  ),
+  LogicalKeyboardKey.numpad1: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '1',
+  ),
+  LogicalKeyboardKey.digit2: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '2',
+  ),
+  LogicalKeyboardKey.numpad2: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '2',
+  ),
+  LogicalKeyboardKey.digit3: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '3',
+  ),
+  LogicalKeyboardKey.numpad3: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '3',
+  ),
+  LogicalKeyboardKey.digit4: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '4',
+  ),
+  LogicalKeyboardKey.numpad4: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '4',
+  ),
+  LogicalKeyboardKey.digit5: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '5',
+  ),
+  LogicalKeyboardKey.numpad5: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '5',
+  ),
+  LogicalKeyboardKey.digit6: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '6',
+  ),
+  LogicalKeyboardKey.numpad6: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '6',
+  ),
+  LogicalKeyboardKey.digit7: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '7',
+  ),
+  LogicalKeyboardKey.numpad7: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '7',
+  ),
+  LogicalKeyboardKey.digit8: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '8',
+  ),
+  LogicalKeyboardKey.numpad8: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '8',
+  ),
+  LogicalKeyboardKey.digit9: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '9',
+  ),
+  LogicalKeyboardKey.numpad9: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '9',
+  ),
 
-  LogicalKeyboardKey.period: const NumberPressed('.'),
-  LogicalKeyboardKey.numpadDecimal: const NumberPressed('.'),
+  LogicalKeyboardKey.period: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '.',
+  ),
+  LogicalKeyboardKey.numpadDecimal: const CalculatorButtonData(
+    action: CalculatorActionType.number,
+    value: '.',
+  ),
 
-  LogicalKeyboardKey.add: const OperatorPressed('+'),
-  LogicalKeyboardKey.numpadAdd: const OperatorPressed('+'),
+  LogicalKeyboardKey.add: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '+',
+  ),
+  LogicalKeyboardKey.numpadAdd: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '+',
+  ),
 
-  LogicalKeyboardKey.minus: const OperatorPressed('-'),
-  LogicalKeyboardKey.numpadSubtract: const OperatorPressed('-'),
+  LogicalKeyboardKey.minus: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '-',
+  ),
+  LogicalKeyboardKey.numpadSubtract: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '-',
+  ),
 
-  LogicalKeyboardKey.asterisk: const OperatorPressed('×'),
-  LogicalKeyboardKey.numpadMultiply: const OperatorPressed('×'),
+  LogicalKeyboardKey.asterisk: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '×',
+  ),
+  LogicalKeyboardKey.numpadMultiply: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '×',
+  ),
 
-  LogicalKeyboardKey.slash: const OperatorPressed('÷'),
-  LogicalKeyboardKey.numpadDivide: const OperatorPressed('÷'),
+  LogicalKeyboardKey.slash: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '÷',
+  ),
+  LogicalKeyboardKey.numpadDivide: const CalculatorButtonData(
+    action: CalculatorActionType.operator,
+    value: '÷',
+  ),
 
-  LogicalKeyboardKey.percent: const PercentagePressed(),
+  LogicalKeyboardKey.percent: const CalculatorButtonData(
+    action: CalculatorActionType.percentage,
+  ),
 
-  LogicalKeyboardKey.enter: const CalculateResult(),
-  LogicalKeyboardKey.numpadEnter: const CalculateResult(),
+  LogicalKeyboardKey.enter: const CalculatorButtonData(
+    action: CalculatorActionType.calculate,
+  ),
+  LogicalKeyboardKey.numpadEnter: const CalculatorButtonData(
+    action: CalculatorActionType.calculate,
+  ),
 
-  LogicalKeyboardKey.backspace: const DeletePressed(),
-  LogicalKeyboardKey.escape: const ClearPressed(),
+  LogicalKeyboardKey.backspace: const CalculatorButtonData(
+    action: CalculatorActionType.delete,
+  ),
+  LogicalKeyboardKey.escape: const CalculatorButtonData(
+    action: CalculatorActionType.clear,
+  ),
 };
 
 const int maxCharacters = 100;
