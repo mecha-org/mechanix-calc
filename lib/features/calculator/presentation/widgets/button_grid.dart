@@ -1,103 +1,157 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mechanix_calculator/features/calculator/bloc/calculator_bloc.dart';
-import 'package:mechanix_calculator/features/calculator/bloc/calculator_event.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/calculator_button.dart';
 
-class CalculatorButtonItem {
+enum CalculatorActionType {
+  number,
+  operator,
+  clear,
+  delete,
+  toggleSign,
+  percentage,
+  calculate,
+}
+
+class CalculatorButtonData {
   final String? text;
   final IconData? icon;
   final CalculatorButtonType type;
-  final CalculatorEvent event;
+  final CalculatorActionType action;
+  final String? value;
 
-  const CalculatorButtonItem({
+  const CalculatorButtonData({
     this.text,
     this.icon,
     this.type = CalculatorButtonType.standard,
-    required this.event,
+    required this.action,
+    this.value,
   });
 }
 
-const List<CalculatorButtonItem> calculatorButtons = [
+const List<CalculatorButtonData> calculatorButtons = [
   // Row 1
-  CalculatorButtonItem(
+  CalculatorButtonData(
     text: 'AC',
     type: CalculatorButtonType.action,
-    event: ClearPressed(),
+    action: CalculatorActionType.clear,
   ),
-  CalculatorButtonItem(
+  CalculatorButtonData(
     text: '+/-',
     type: CalculatorButtonType.action,
-    event: ToggleSignPressed(),
+    action: CalculatorActionType.toggleSign,
   ),
-  CalculatorButtonItem(
+  CalculatorButtonData(
     icon: CupertinoIcons.percent,
     type: CalculatorButtonType.action,
-    event: PercentagePressed(),
+    action: CalculatorActionType.percentage,
   ),
-  CalculatorButtonItem(
+  CalculatorButtonData(
     text: '÷',
     type: CalculatorButtonType.action,
-    event: OperatorPressed('÷'),
+    action: CalculatorActionType.operator,
+    value: '÷',
   ),
 
   // Row 2
-  CalculatorButtonItem(text: '7', event: NumberPressed('7')),
-  CalculatorButtonItem(text: '8', event: NumberPressed('8')),
-  CalculatorButtonItem(text: '9', event: NumberPressed('9')),
-  CalculatorButtonItem(
+  CalculatorButtonData(
+    text: '7',
+    action: CalculatorActionType.number,
+    value: '7',
+  ),
+  CalculatorButtonData(
+    text: '8',
+    action: CalculatorActionType.number,
+    value: '8',
+  ),
+  CalculatorButtonData(
+    text: '9',
+    action: CalculatorActionType.number,
+    value: '9',
+  ),
+  CalculatorButtonData(
     text: '×',
     type: CalculatorButtonType.action,
-    event: OperatorPressed('×'),
+    action: CalculatorActionType.operator,
+    value: '×',
   ),
 
   // Row 3
-  CalculatorButtonItem(text: '4', event: NumberPressed('4')),
-  CalculatorButtonItem(text: '5', event: NumberPressed('5')),
-  CalculatorButtonItem(text: '6', event: NumberPressed('6')),
-  CalculatorButtonItem(
+  CalculatorButtonData(
+    text: '4',
+    action: CalculatorActionType.number,
+    value: '4',
+  ),
+  CalculatorButtonData(
+    text: '5',
+    action: CalculatorActionType.number,
+    value: '5',
+  ),
+  CalculatorButtonData(
+    text: '6',
+    action: CalculatorActionType.number,
+    value: '6',
+  ),
+  CalculatorButtonData(
     text: '-',
     type: CalculatorButtonType.action,
-    event: OperatorPressed('-'),
+    action: CalculatorActionType.operator,
+    value: '-',
   ),
 
   // Row 4
-  CalculatorButtonItem(text: '1', event: NumberPressed('1')),
-  CalculatorButtonItem(text: '2', event: NumberPressed('2')),
-  CalculatorButtonItem(text: '3', event: NumberPressed('3')),
-  CalculatorButtonItem(
+  CalculatorButtonData(
+    text: '1',
+    action: CalculatorActionType.number,
+    value: '1',
+  ),
+  CalculatorButtonData(
+    text: '2',
+    action: CalculatorActionType.number,
+    value: '2',
+  ),
+  CalculatorButtonData(
+    text: '3',
+    action: CalculatorActionType.number,
+    value: '3',
+  ),
+  CalculatorButtonData(
     text: '+',
     type: CalculatorButtonType.action,
-    event: OperatorPressed('+'),
+    action: CalculatorActionType.operator,
+    value: '+',
   ),
 
   // Row 5
-  CalculatorButtonItem(
+  CalculatorButtonData(
     icon: Icons.backspace_outlined,
     type: CalculatorButtonType.action,
-    event: DeletePressed(),
+    action: CalculatorActionType.delete,
   ),
-  CalculatorButtonItem(text: '0', event: NumberPressed('0')),
-  CalculatorButtonItem(
+  CalculatorButtonData(
+    text: '0',
+    action: CalculatorActionType.number,
+    value: '0',
+  ),
+  CalculatorButtonData(
     text: '.',
-    event: NumberPressed('.'),
     type: CalculatorButtonType.action,
+    action: CalculatorActionType.number,
+    value: '.',
   ),
-  CalculatorButtonItem(
+  CalculatorButtonData(
     text: '=',
     type: CalculatorButtonType.primary,
-    event: CalculateResult(),
+    action: CalculatorActionType.calculate,
   ),
 ];
 
 class ButtonGrid extends StatelessWidget {
-  const ButtonGrid({super.key});
+  final ValueChanged<CalculatorButtonData>? onButtonPressed;
+
+  const ButtonGrid({super.key, this.onButtonPressed});
 
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<CalculatorBloc>();
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: LayoutBuilder(
@@ -124,7 +178,7 @@ class ButtonGrid extends StatelessWidget {
                 text: btn.text,
                 icon: btn.icon,
                 type: btn.type,
-                onTap: () => bloc.add(btn.event),
+                onTap: () => onButtonPressed?.call(btn),
               );
             },
           );
