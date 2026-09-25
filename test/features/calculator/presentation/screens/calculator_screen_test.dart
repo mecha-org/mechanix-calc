@@ -312,7 +312,32 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text(invalidOperationsErrorMessage), findsNothing);
-          expect(find.text('9'), findsOneWidget);
+          // Verify DisplayPanel shows '9' and not '0'
+          expect(
+            find.descendant(
+              of: find.byType(DisplayPanel),
+              matching: find.text('9'),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: find.byType(DisplayPanel),
+              matching: find.text('0'),
+            ),
+            findsNothing,
+          );
+
+          // Type '8' to continue building the expression '98'
+          await tester.sendKeyEvent(LogicalKeyboardKey.digit8);
+          await tester.pumpAndSettle();
+          expect(
+            find.descendant(
+              of: find.byType(DisplayPanel),
+              matching: find.text('98'),
+            ),
+            findsOneWidget,
+          );
         },
       );
     });

@@ -105,8 +105,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   void _onCalculateResult() {
     if (_expressionNotifier.value.isNotEmpty) {
+      final expr = _expressionNotifier.value;
+      _expressionNotifier.value = '';
       context.read<CalculatorBloc>().add(
-        CalculateResult(_expressionNotifier.value),
+        CalculateResult(expr),
       );
     }
   }
@@ -157,12 +159,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<CalculatorBloc, CalculatorState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.errorMessage.isNotEmpty &&
             state.errorMessage == invalidOperationsErrorMessage) {
           _errorMessageNotifier.value = state.errorMessage;
-        } else if (state.errorMessage.isEmpty && state.expression.isEmpty) {
-          _expressionNotifier.value = '';
+        } else if (state.errorMessage.isEmpty &&
+            _errorMessageNotifier.value == invalidOperationsErrorMessage) {
           _errorMessageNotifier.value = '';
         }
       },
