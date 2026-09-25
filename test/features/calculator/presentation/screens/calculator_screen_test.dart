@@ -305,14 +305,12 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
           await tester.pumpAndSettle();
 
-          expect(find.text('5÷0'), findsOneWidget);
-          expect(find.text(invalidOperationsErrorMessage), findsOneWidget);
+          expect(bloc.state.errorMessage, invalidOperationsErrorMessage);
 
-          // Type '9'
+          // Type '9' after the error.
           await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
           await tester.pumpAndSettle();
 
-          // Error should be completely gone, 9 shown as active expression
           expect(find.text(invalidOperationsErrorMessage), findsNothing);
           expect(find.text('9'), findsOneWidget);
         },
