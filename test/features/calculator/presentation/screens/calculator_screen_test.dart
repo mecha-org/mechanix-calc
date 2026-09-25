@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_bloc.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_event.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/screens/calculator_screen.dart';
@@ -289,6 +290,31 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(bloc.state.result, '15');
+        },
+      );
+
+      testWidgets(
+        'typing after error clears error message and starts a fresh expression',
+        (tester) async {
+          await tester.pumpWidget(createScreen());
+
+          // Perform division by zero: 5 ÷ 0 =
+          await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+          await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+          await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+
+          expect(find.text('5÷0'), findsOneWidget);
+          expect(find.text(invalidOperationsErrorMessage), findsOneWidget);
+
+          // Type '9'
+          await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+          await tester.pumpAndSettle();
+
+          // Error should be completely gone, 9 shown as active expression
+          expect(find.text(invalidOperationsErrorMessage), findsNothing);
+          expect(find.text('9'), findsOneWidget);
         },
       );
     });

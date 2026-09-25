@@ -32,7 +32,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     super.dispose();
   }
 
+  bool get _hasFatalError =>
+      _errorMessageNotifier.value == invalidOperationsErrorMessage;
+
   void _onNumberPressed(String number) {
+    if (_hasFatalError) {
+      _errorMessageNotifier.value = '';
+      _expressionNotifier.value = number == '.' ? '0.' : number;
+      context.read<CalculatorBloc>().add(const ClearPressed());
+      return;
+    }
     final res = ExpressionBuilder.handleNumber(
       _expressionNotifier.value,
       number,
@@ -42,6 +51,12 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   void _onOperatorPressed(String operator) {
+    if (_hasFatalError) {
+      _errorMessageNotifier.value = '';
+      _expressionNotifier.value = operator == '-' ? '-' : '';
+      context.read<CalculatorBloc>().add(const ClearPressed());
+      return;
+    }
     final previousResult = context.read<CalculatorBloc>().state.result;
     final res = ExpressionBuilder.handleOperator(
       _expressionNotifier.value,
@@ -59,18 +74,30 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   void _onDeletePressed() {
+    if (_hasFatalError) {
+      _onClearPressed();
+      return;
+    }
     final res = ExpressionBuilder.handleDelete(_expressionNotifier.value);
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
   }
 
   void _onToggleSignPressed() {
+    if (_hasFatalError) {
+      _onClearPressed();
+      return;
+    }
     final res = ExpressionBuilder.handleToggleSign(_expressionNotifier.value);
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
   }
 
   void _onPercentagePressed() {
+    if (_hasFatalError) {
+      _onClearPressed();
+      return;
+    }
     final res = ExpressionBuilder.handlePercentage(_expressionNotifier.value);
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
@@ -172,17 +199,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                                       blocState.history.isNotEmpty;
                                   final displayExpression =
                                       expression.isNotEmpty
-                                      ? expression
-                                      : blocState.expression;
-                                  final displayErrorMessage =
-                                      errorMessage.isNotEmpty
-                                      ? errorMessage
-                                      : blocState.errorMessage;
+                                          ? expression
+                                          : blocState.expression;
 
                                   return DisplayPanel(
                                     expression: displayExpression,
                                     result: blocState.result,
-                                    errorMessage: displayErrorMessage,
+                                    errorMessage: errorMessage,
                                     history: blocState.history,
                                     isHistoryOpen: isOpen,
                                     onDismissHistory: () {
