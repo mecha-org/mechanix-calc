@@ -16,19 +16,19 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     on<ExpressionChanged>(_onExpressionChanged);
   }
 
+  static const _operators = ['+', '-', '×', '÷', '%'];
   static final _percentPattern = RegExp(r'(\d+(?:\.\d+)?)%');
   static final _numberFormattingPattern = RegExp(
     r'(\d{1,3})(?=(\d{3})+(?!\d))',
   );
+  static final _operatorSplitPattern = RegExp(r'[+\-×÷%]');
 
   static int _countOperations(String expression) {
     if (expression.isEmpty) return 0;
 
     int count = 0;
-
     for (int i = 0; i < expression.length; i++) {
       final char = expression[i];
-
       // Count '-' as an operator only when it's not a leading negative sign.
       if (operationCharacters.contains(char)) {
         count++;
@@ -36,12 +36,11 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         count++;
       }
     }
-
     return count;
   }
 
   static bool _hasNumberExceedingMaxDigits(String expression) {
-    final segments = expression.split(RegExp(r'[+\-×÷%]'));
+    final segments = expression.split(_operatorSplitPattern);
     for (final segment in segments) {
       final digits = segment.replaceAll(RegExp(r'\D'), '');
       if (digits.length > maxDigits) {
@@ -51,151 +50,88 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     return false;
   }
 
+  static String? _validateExpressionLimits(String expression) {
+    if (expression.length > maxCharacters) {
+      return maxCharactersErrorMessage;
+    }
+    if (_countOperations(expression) > maxOperations) {
+      return maxOperationsErrorMessage;
+    }
+    if (_hasNumberExceedingMaxDigits(expression)) {
+      return maxDigitsErrorMessage;
+    }
+    return null;
+  }
+
   void _onNumberPressed(NumberPressed event, Emitter<CalculatorState> emit) {
-    if (state.expression.length >= maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
-      return;
-    }
+    String resultingExpression;
 
-    if (_countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-
-    final currentSegments = state.expression.split(RegExp(r'[+\-×÷%]'));
-    final currentSegment = currentSegments.isNotEmpty
-        ? currentSegments.last
-        : '';
-    final currentDigitCount = currentSegment
-        .replaceAll(RegExp(r'\D'), '')
-        .length;
-
-    if (event.number != '.' &&
-        currentSegment != '0' &&
-        currentDigitCount >= maxDigits) {
-      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
-      return;
-    }
-
-    String newExpression = state.expression;
-
-    // 1. Handle decimal point press
     if (event.number == '.') {
-      // If the screen is empty or currently just '0', force it to be '0.'
-      if (newExpression.isEmpty || newExpression == '0') {
-        newExpression = '0.';
-      } else {
-        // SAFEGUARD: Prevent adding multiple decimals in a single number (e.g., '5.5.')
-        final segments = newExpression.split(RegExp(r'[+\-×÷%]'));
-        if (segments.isNotEmpty && segments.last.contains('.')) {
-          return; // Ignore the press if this number already has a decimal point
-        }
-        newExpression += '.';
+      final segments = state.expression.split(_operatorSplitPattern);
+      if (segments.isNotEmpty && segments.last.contains('.')) {
+        return;
       }
-    }
-    // 2. Handle normal numbers (0-9)
-    else {
-      if (newExpression == '0') {
-        newExpression = event.number;
-      } else {
-        newExpression += event.number;
-      }
+      resultingExpression =
+          (state.expression.isEmpty || state.expression == '0')
+          ? '0.'
+          : '${state.expression}.';
+    } else {
+      resultingExpression = state.expression == '0'
+          ? event.number
+          : state.expression + event.number;
     }
 
-    if (newExpression.length > maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+    final error = _validateExpressionLimits(resultingExpression);
+    if (error != null) {
+      emit(state.copyWith(errorMessage: error));
       return;
     }
 
-    if (_countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-
-    if (_hasNumberExceedingMaxDigits(newExpression)) {
-      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
-      return;
-    }
-
-    emit(state.copyWith(expression: newExpression, errorMessage: ''));
+    emit(state.copyWith(expression: resultingExpression, errorMessage: ''));
   }
 
   void _onOperatorPressed(
     OperatorPressed event,
     Emitter<CalculatorState> emit,
   ) {
-    const operators = ['+', '-', '×', '÷', '%'];
-
-    // If the screen is empty or currently shows just '0', and there is no
-    // previous result, treat a first-pressed '-' strictly as a negative sign.
+    // If the screen is empty and there is no previous result,
+    // treat a first-pressed '-' strictly as a negative sign.
     if (state.expression.isEmpty && event.operator == '-') {
       emit(state.copyWith(expression: '-', result: '', errorMessage: ''));
       return;
     }
 
-    // 1. Handle the case where the expression is empty
+    String resultingExpression;
     if (state.expression.isEmpty) {
-      // If we have a result from a previous calculation, start the new expression with it.
-      // Example: result is "30". Pressing '+' makes expression "30+"
       if (state.result.isNotEmpty) {
-        final newExpr = state.result + event.operator;
-        if (newExpr.length > maxCharacters) {
-          emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
-          return;
-        }
-        if (_countOperations(newExpr) > maxOperations) {
-          emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-          return;
-        }
-        if (_hasNumberExceedingMaxDigits(newExpr)) {
-          emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
-          return;
-        }
-        emit(state.copyWith(expression: newExpr, result: '', errorMessage: ''));
+        resultingExpression = state.result + event.operator;
+      } else {
+        return;
       }
-      return;
-    }
-
-    if (state.expression.length >= maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
-      return;
-    }
-
-    if (_countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-
-    // 2. Handle the case where the expression is NOT empty
-    String lastChar = state.expression.substring(state.expression.length - 1);
-    String newExpression;
-
-    // If the last character is already an operator, replace it
-    if (operators.contains(lastChar)) {
-      newExpression =
-          state.expression.substring(0, state.expression.length - 1) +
-          event.operator;
     } else {
-      // Otherwise, just append the operator
-      newExpression = state.expression + event.operator;
+      final lastChar = state.expression[state.expression.length - 1];
+      if (_operators.contains(lastChar)) {
+        resultingExpression =
+            state.expression.substring(0, state.expression.length - 1) +
+            event.operator;
+      } else {
+        resultingExpression = state.expression + event.operator;
+      }
     }
 
-    if (newExpression.length > maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+    final error = _validateExpressionLimits(resultingExpression);
+    if (error != null) {
+      emit(state.copyWith(errorMessage: error));
       return;
     }
 
-    if (_countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-
-    if (_hasNumberExceedingMaxDigits(newExpression)) {
-      emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
-      return;
-    }
-
-    emit(state.copyWith(expression: newExpression, errorMessage: ''));
+    emit(
+      state.copyWith(
+        expression: resultingExpression,
+        result: '',
+        errorMessage: '',
+      ),
+    );
   }
 
   void _onClearPressed(ClearPressed event, Emitter<CalculatorState> emit) {
@@ -293,23 +229,17 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
   ) {
     if (state.expression.isEmpty) return;
 
-    String expression = state.expression;
-    if (expression.startsWith('-')) {
-      emit(
-        state.copyWith(expression: expression.substring(1), errorMessage: ''),
-      );
-    } else {
-      final newExpression = '-$expression';
-      if (newExpression.length > maxCharacters) {
-        emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
-        return;
-      }
-      if (_hasNumberExceedingMaxDigits(newExpression)) {
-        emit(state.copyWith(errorMessage: maxDigitsErrorMessage));
-        return;
-      }
-      emit(state.copyWith(expression: newExpression, errorMessage: ''));
+    final resultingExpression = state.expression.startsWith('-')
+        ? state.expression.substring(1)
+        : '-${state.expression}';
+
+    final error = _validateExpressionLimits(resultingExpression);
+    if (error != null) {
+      emit(state.copyWith(errorMessage: error));
+      return;
     }
+
+    emit(state.copyWith(expression: resultingExpression, errorMessage: ''));
   }
 
   void _onPercentagePressed(
@@ -317,24 +247,15 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     Emitter<CalculatorState> emit,
   ) {
     if (state.expression.isEmpty) return;
-    if (state.expression.length >= maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
+
+    final resultingExpression = '${state.expression}%';
+    final error = _validateExpressionLimits(resultingExpression);
+    if (error != null) {
+      emit(state.copyWith(errorMessage: error));
       return;
     }
-    if (_countOperations(state.expression) >= maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-    final newExpression = '${state.expression}%';
-    if (newExpression.length > maxCharacters) {
-      emit(state.copyWith(errorMessage: maxCharactersErrorMessage));
-      return;
-    }
-    if (_countOperations(newExpression) > maxOperations) {
-      emit(state.copyWith(errorMessage: maxOperationsErrorMessage));
-      return;
-    }
-    emit(state.copyWith(expression: newExpression, errorMessage: ''));
+
+    emit(state.copyWith(expression: resultingExpression, errorMessage: ''));
   }
 
   void _onExpressionChanged(

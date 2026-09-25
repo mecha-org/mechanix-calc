@@ -26,8 +26,8 @@ void main() {
     test('ClearPressed should NOT clear history', () async {
       final expectedStates = [
         const CalculatorState(expression: '5', result: '0', history: []),
-        const CalculatorState(expression: '5+', result: '0', history: []),
-        const CalculatorState(expression: '5+3', result: '0', history: []),
+        const CalculatorState(expression: '5+', result: '', history: []),
+        const CalculatorState(expression: '5+3', result: '', history: []),
         isA<CalculatorState>()
             .having((s) => s.expression, 'expression', '')
             .having((s) => s.result, 'result', '8')
@@ -53,8 +53,8 @@ void main() {
     test('Multiple calculations should be added to history', () {
       final expectedStates = [
         const CalculatorState(expression: '5', result: '0', history: []),
-        const CalculatorState(expression: '5+', result: '0', history: []),
-        const CalculatorState(expression: '5+3', result: '0', history: []),
+        const CalculatorState(expression: '5+', result: '', history: []),
+        const CalculatorState(expression: '5+3', result: '', history: []),
         isA<CalculatorState>()
             .having((s) => s.expression, 'expression', '')
             .having((s) => s.result, 'result', '8')
@@ -100,8 +100,8 @@ void main() {
     test('Division by zero should show error message', () {
       final expectedStates = [
         const CalculatorState(expression: '5', result: '0', history: []),
-        const CalculatorState(expression: '5÷', result: '0', history: []),
-        const CalculatorState(expression: '5÷0', result: '0', history: []),
+        const CalculatorState(expression: '5÷', result: '', history: []),
+        const CalculatorState(expression: '5÷0', result: '', history: []),
         const CalculatorState(
           expression: '5÷0',
           result: '',
@@ -137,7 +137,7 @@ void main() {
     test('Malformed expression should show error message', () {
       final expectedStates = [
         const CalculatorState(expression: '5', result: '0', history: []),
-        const CalculatorState(expression: '5+', result: '0', history: []),
+        const CalculatorState(expression: '5+', result: '', history: []),
         const CalculatorState(
           expression: '5+',
           result: '',
@@ -161,6 +161,7 @@ void main() {
       // Pressing AC should clear error message
       calculatorBloc.add(const ClearPressed());
     });
+
     test(
       'Multiplying a negative result by zero should yield 0 instead of -0',
       () {
@@ -168,29 +169,35 @@ void main() {
           // 1. Typing '10'
           const CalculatorState(expression: '1', result: '0', history: []),
           const CalculatorState(expression: '10', result: '0', history: []),
+
           // 2. Pressing '-'
-          const CalculatorState(expression: '10-', result: '0', history: []),
+          const CalculatorState(expression: '10-', result: '', history: []),
+
           // 3. Typing '20'
-          const CalculatorState(expression: '10-2', result: '0', history: []),
-          const CalculatorState(expression: '10-20', result: '0', history: []),
+          const CalculatorState(expression: '10-2', result: '', history: []),
+          const CalculatorState(expression: '10-20', result: '', history: []),
+
           // 4. First calculation: 10 - 20 = -10
           const CalculatorState(
             expression: '',
             result: '-10',
             history: [HistoryItem(expression: '10-20', result: '-10')],
           ),
-          // 5. Pressing '×' (FIXED: result is '' in your Bloc)
+
+          // 5. Pressing '×'
           const CalculatorState(
             expression: '-10×',
-            result: '', // Changed from '-10' to ''
+            result: '',
             history: [HistoryItem(expression: '10-20', result: '-10')],
           ),
-          // 6. Typing '0' (FIXED: result is '' in your Bloc)
+
+          // 6. Typing '0'
           const CalculatorState(
             expression: '-10×0',
-            result: '', // Changed from '-10' to ''
+            result: '',
             history: [HistoryItem(expression: '10-20', result: '-10')],
           ),
+
           // 7. Final calculation: -10 × 0 = 0
           const CalculatorState(
             expression: '',
@@ -218,7 +225,6 @@ void main() {
         calculatorBloc.add(const CalculateResult());
       },
     );
-
     group('Decimal point handling', () {
       test('decimal on empty expression produces 0.', () {
         final expectedStates = [
@@ -274,9 +280,9 @@ void main() {
           const CalculatorState(expression: '5', result: '0', history: []),
           const CalculatorState(expression: '5.', result: '0', history: []),
           const CalculatorState(expression: '5.5', result: '0', history: []),
-          const CalculatorState(expression: '5.5+', result: '0', history: []),
-          const CalculatorState(expression: '5.5+2', result: '0', history: []),
-          const CalculatorState(expression: '5.5+2.', result: '0', history: []),
+          const CalculatorState(expression: '5.5+', result: '', history: []),
+          const CalculatorState(expression: '5.5+2', result: '', history: []),
+          const CalculatorState(expression: '5.5+2.', result: '', history: []),
         ];
 
         expectLater(calculatorBloc.stream, emitsInOrder(expectedStates));
@@ -318,10 +324,10 @@ void main() {
       test('consecutive operators replace the last operator', () {
         final expectedStates = [
           const CalculatorState(expression: '9', result: '0', history: []),
-          const CalculatorState(expression: '9+', result: '0', history: []),
-          const CalculatorState(expression: '9-', result: '0', history: []),
-          const CalculatorState(expression: '9×', result: '0', history: []),
-          const CalculatorState(expression: '9÷', result: '0', history: []),
+          const CalculatorState(expression: '9+', result: '', history: []),
+          const CalculatorState(expression: '9-', result: '', history: []),
+          const CalculatorState(expression: '9×', result: '', history: []),
+          const CalculatorState(expression: '9÷', result: '', history: []),
         ];
 
         expectLater(calculatorBloc.stream, emitsInOrder(expectedStates));
@@ -405,14 +411,10 @@ void main() {
           const CalculatorState(expression: '2', result: '0', history: []),
           const CalculatorState(expression: '20', result: '0', history: []),
           const CalculatorState(expression: '200', result: '0', history: []),
-          const CalculatorState(expression: '200×', result: '0', history: []),
-          const CalculatorState(expression: '200×5', result: '0', history: []),
-          const CalculatorState(expression: '200×50', result: '0', history: []),
-          const CalculatorState(
-            expression: '200×50%',
-            result: '0',
-            history: [],
-          ),
+          const CalculatorState(expression: '200×', result: '', history: []),
+          const CalculatorState(expression: '200×5', result: '', history: []),
+          const CalculatorState(expression: '200×50', result: '', history: []),
+          const CalculatorState(expression: '200×50%', result: '', history: []),
           isA<CalculatorState>()
               .having((s) => s.expression, 'expression', '')
               .having((s) => s.result, 'result', '100')
@@ -445,22 +447,18 @@ void main() {
           const CalculatorState(expression: '10', result: '0', history: []),
           const CalculatorState(expression: '100', result: '0', history: []),
           const CalculatorState(expression: '1000', result: '0', history: []),
-          const CalculatorState(expression: '1000+', result: '0', history: []),
-          const CalculatorState(expression: '1000+2', result: '0', history: []),
-          const CalculatorState(
-            expression: '1000+20',
-            result: '0',
-            history: [],
-          ),
+          const CalculatorState(expression: '1000+', result: '', history: []),
+          const CalculatorState(expression: '1000+2', result: '', history: []),
+          const CalculatorState(expression: '1000+20', result: '', history: []),
           const CalculatorState(
             expression: '1000+200',
-            result: '0',
+            result: '',
             history: [],
           ),
 
           const CalculatorState(
             expression: '1000+2000',
-            result: '0',
+            result: '',
             history: [],
           ),
           isA<CalculatorState>()
@@ -502,54 +500,49 @@ void main() {
     });
 
     group('Limits: 15 Digits, 20 Operations, and 100 Characters', () {
-      test(
-        '20 operations limit locks calculator and shows operations limit message',
-        () async {
-          // Build 19 operations: "1+1+1...+1" (19 pluses)
-          for (int i = 0; i < 19; i++) {
-            calculatorBloc.add(const NumberPressed('1'));
-            calculatorBloc.add(const OperatorPressed('+'));
-          }
+      test('20 operations limit prevents adding the 21st operation', () async {
+        // Build 20 operations:
+        // "1+1+1+...+1+".
+        for (int i = 0; i < 20; i++) {
           calculatorBloc.add(const NumberPressed('1'));
-          // 20th operation (40th plus sign)
           calculatorBloc.add(const OperatorPressed('+'));
+        }
 
-          await pumpEventQueue();
+        await pumpEventQueue();
 
-          // 20 operations present in expression
-          expect(calculatorBloc.state.errorMessage, '');
-          final exprWith20Ops = calculatorBloc.state.expression;
+        final exprWith20Ops = calculatorBloc.state.expression;
 
-          // Trying to type another number or operator should be blocked and show error
-          calculatorBloc.add(const NumberPressed('1'));
-          await pumpEventQueue();
-          expect(calculatorBloc.state.expression, exprWith20Ops);
-          expect(
-            calculatorBloc.state.errorMessage,
-            "Can't enter more than 20 operations",
-          );
+        // 20 operations should be accepted.
+        expect(exprWith20Ops.endsWith('+'), isTrue);
+        expect(calculatorBloc.state.errorMessage, '');
 
-          // Trying to type another operator is also blocked
-          calculatorBloc.add(const OperatorPressed('+'));
-          await pumpEventQueue();
-          expect(calculatorBloc.state.expression, exprWith20Ops);
-          expect(
-            calculatorBloc.state.errorMessage,
-            "Can't enter more than 20 operations",
-          );
+        // Adding a number does not increase the operation count,
+        // so it should still be allowed.
+        calculatorBloc.add(const NumberPressed('1'));
+        await pumpEventQueue();
 
-          // Deleting the 40th plus allows typing again and clears error
-          calculatorBloc.add(const DeletePressed());
-          await pumpEventQueue();
-          expect(calculatorBloc.state.errorMessage, '');
+        final exprWith20OpsAndNumber = calculatorBloc.state.expression;
 
-          // Now can type number and 40th operator again
-          calculatorBloc.add(const NumberPressed('5'));
-          await pumpEventQueue();
-          expect(calculatorBloc.state.expression.endsWith('5'), isTrue);
-          expect(calculatorBloc.state.errorMessage, '');
-        },
-      );
+        expect(exprWith20OpsAndNumber.endsWith('1'), isTrue);
+        expect(calculatorBloc.state.errorMessage, '');
+
+        // Adding another operator would create the 21st operation,
+        // so it should be blocked.
+        calculatorBloc.add(const OperatorPressed('+'));
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.expression, exprWith20OpsAndNumber);
+        expect(calculatorBloc.state.errorMessage, maxOperationsErrorMessage);
+
+        // Delete the last number.
+        calculatorBloc.add(const DeletePressed());
+        await pumpEventQueue();
+
+        expect(calculatorBloc.state.errorMessage, '');
+
+        // The expression is back to 20 operations.
+        expect(calculatorBloc.state.expression, exprWith20Ops);
+      });
 
       test(
         'single number has 15 digits limit and shows digits limit message',
