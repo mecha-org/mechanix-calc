@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_state.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_panel.dart';
+import 'package:mechanix_calculator/l10n/app_localizations.dart';
 
 void main() {
   group('DisplayPanel', () {
@@ -212,6 +213,30 @@ void main() {
 
           expect(find.text('123'), findsOneWidget);
           expect(find.text("Can't enter more than 15 digits"), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'resolves error message keys to localized strings with AppLocalizations',
+        (tester) async {
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: DisplayPanel(
+                  expression: '5÷0',
+                  result: '',
+                  errorMessage: invalidOperationsErrorMessage,
+                  history: [],
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('5÷0'), findsOneWidget);
+          expect(find.text('Error'), findsOneWidget);
         },
       );
     });

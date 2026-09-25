@@ -52,7 +52,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
         final l10n = AppLocalizations.of(context);
 
         MechanixSnackbar.text(
-          text: l10n?.errorMessage(widget.errorMessage) ?? widget.errorMessage,
+          text: _getErrorMessage(l10n, widget.errorMessage),
           position: MechanixSnackbarPosition.top,
         ).show(context);
       });
@@ -68,8 +68,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
     if (widget.errorMessage.isNotEmpty &&
         widget.errorMessage == invalidOperationsErrorMessage) {
       topExpression = widget.expression;
-      bottomText =
-          l10n?.errorMessage(widget.errorMessage) ?? widget.errorMessage;
+      bottomText = _getErrorMessage(l10n, widget.errorMessage);
     } else if (widget.expression.isNotEmpty) {
       topExpression = '';
       bottomText = widget.expression;
@@ -289,5 +288,21 @@ class _HistoryTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _getErrorMessage(AppLocalizations? l10n, String key) {
+  if (l10n == null) return key;
+  switch (key) {
+    case maxDigitsErrorMessage:
+      return l10n.maxDigitsErrorMessage;
+    case maxCharactersErrorMessage:
+      return l10n.maxCharactersErrorMessage;
+    case maxOperationsErrorMessage:
+      return l10n.maxOperationsErrorMessage;
+    case invalidOperationsErrorMessage:
+      return l10n.invalidOperationsErrorMessage;
+    default:
+      return l10n.invalidOperationsErrorMessage;
   }
 }

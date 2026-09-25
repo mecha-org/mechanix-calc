@@ -23,22 +23,20 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
   static int _countOperations(String expression) {
     if (expression.isEmpty) return 0;
+
     int count = 0;
+
     for (int i = 0; i < expression.length; i++) {
       final char = expression[i];
-      if (char == '+' ||
-          char == '×' ||
-          char == '÷' ||
-          char == '%' ||
-          char == '*' ||
-          char == '/') {
+
+      // Count '-' as an operator only when it's not a leading negative sign.
+      if (operationCharacters.contains(char)) {
         count++;
-      } else if (char == '-') {
-        if (i > 0) {
-          count++;
-        }
+      } else if (char == '-' && i > 0) {
+        count++;
       }
     }
+
     return count;
   }
 

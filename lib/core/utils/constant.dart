@@ -56,3 +56,5 @@ const String maxCharactersErrorMessage = "Can't enter more than 100 characters";
 const String maxOperationsErrorMessage = "Can't enter more than 20 operations";
 
 const String invalidOperationsErrorMessage = "Error";
+
+const operationCharacters = {'+', '×', '÷', '%', '*', '/'};

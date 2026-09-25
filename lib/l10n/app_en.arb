@@ -3,13 +3,20 @@
   "@calculator": {
     "description": "Title of the calculator application"
   },
-  "errorMessage": "{message}",
-  "@errorMessage": {
-    "description": "Error message displayed by the calculator",
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
+  "maxDigitsErrorMessage": "Can't enter more than 15 digits",
+  "@maxDigitsErrorMessage": {
+    "description": "Error message when entering more than 15 digits in a single number"
+  },
+  "maxCharactersErrorMessage": "Can't enter more than 100 characters",
+  "@maxCharactersErrorMessage": {
+    "description": "Error message when total expression length exceeds 100 characters"
+  },
+  "maxOperationsErrorMessage": "Can't enter more than 20 operations",
+  "@maxOperationsErrorMessage": {
+    "description": "Error message when number of operators exceeds 20"
+  },
+  "invalidOperationsErrorMessage": "Error",
+  "@invalidOperationsErrorMessage": {
+    "description": "Error message for invalid mathematical operation or malformed expression"
   }
 }
