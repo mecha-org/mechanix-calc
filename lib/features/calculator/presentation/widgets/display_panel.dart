@@ -135,7 +135,11 @@ class _DisplayPanelState extends State<DisplayPanel> {
             onTap: widget.onDismissHistory,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 64),
-              child: SingleChildScrollView(child: displayContent),
+              child: SingleChildScrollView(
+                reverse: true,
+                physics: const NeverScrollableScrollPhysics(),
+                child: displayContent,
+              ),
             ),
           ),
         ],
@@ -212,24 +216,26 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
   Widget build(BuildContext context) {
     final items = widget.history.reversed.toList();
 
-    return Container(
-      width: double.infinity,
+    return Material(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: Scrollbar(
-        controller: _scrollController,
-        thumbVisibility: true,
-        child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
-          ),
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.only(top: 8, bottom: 8),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
-            },
+      child: SizedBox(
+        width: double.infinity,
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+            ),
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
+              },
+            ),
           ),
         ),
       ),
@@ -251,40 +257,43 @@ class _HistoryTile extends StatelessWidget {
       color: Theme.of(context).colorScheme.onSecondaryContainer,
     );
 
-    return InkWell(
-      onTap: () => onTap?.call(item.expression),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: Text(
-                item.expression,
-                textAlign: TextAlign.start,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textStyle,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('=', style: textStyle.copyWith(fontSize: 24)),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                item.result,
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                style: textStyle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onTap?.call(item.expression),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(
+                  item.expression,
+                  textAlign: TextAlign.start,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textStyle,
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('=', style: textStyle.copyWith(fontSize: 24)),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  item.result,
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: textStyle.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
