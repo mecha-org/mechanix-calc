@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/calculator_button.dart';
 
@@ -41,7 +40,7 @@ const List<CalculatorButtonData> calculatorButtons = [
     action: CalculatorActionType.toggleSign,
   ),
   CalculatorButtonData(
-    icon: CupertinoIcons.percent,
+    icon: Icons.percent,
     type: CalculatorButtonType.action,
     action: CalculatorActionType.percentage,
   ),
