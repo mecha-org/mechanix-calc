@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mechanix_calculator/l10n/app_localizations.dart';
-import 'package:show_fps/show_fps.dart';
 import 'package:widgets/widgets.dart';
 
 import 'features/calculator/bloc/calculator_bloc.dart';
@@ -18,9 +15,10 @@ class CalculatorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showFps =
-        Platform.environment['SHOW_FPS'] == 'true' ||
-        const String.fromEnvironment('SHOW_FPS') == 'true';
+    // Enable it to check run time fps with show_fps dependency
+    // final showFps =
+    //     Platform.environment['SHOW_FPS'] == 'true' ||
+    //     const String.fromEnvironment('SHOW_FPS') == 'true';
 
     return MechanixTheme(
       builder: (context, theme, child) {
@@ -35,15 +33,15 @@ class CalculatorApp extends StatelessWidget {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: showFps
-              ? (context, child) {
-                  return ShowFPS(
-                    visible: showFps,
-                    showChart: false,
-                    child: child!,
-                  );
-                }
-              : null,
+          // builder: showFps
+          //     ? (context, child) {
+          //         return ShowFPS(
+          //           visible: showFps,
+          //           showChart: false,
+          //           child: child!,
+          //         );
+          //       }
+          //     : null,
           home: BlocProvider(
             create: (context) => CalculatorBloc(),
             child: const CalculatorScreen(),

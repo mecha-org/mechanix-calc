@@ -34,7 +34,6 @@ dependencies:
   equatable: ^2.0.7
   math_expressions: ^2.6.0
 
-  show_fps: ^1.1.0
   flutter_localizations:
     sdk: flutter
   intl: any
