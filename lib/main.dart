@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mechanix_calculator/l10n/app_localizations.dart';
+import 'package:mechanix_common/mechanix_common.dart';
 import 'package:widgets/widgets.dart';
 
 import 'features/calculator/bloc/calculator_bloc.dart';
 import 'features/calculator/presentation/screens/calculator_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  MechanixApp.registerSingleton('mechanix_calculator', (_) {
+    // Single instance activation handler (no arguments required for calc)
+  });
   runApp(const CalculatorApp());
 }
 

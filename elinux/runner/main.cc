@@ -8,12 +8,30 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
+
+#include <mechanix_common/mechanix_common_plugin.h>
+#include <mechanix_common/dbus_instance_manager.h>
 
 #include "flutter_embedder_options.h"
 #include "flutter_window.h"
 
 int main(int argc, char **argv)
 {
+  // 1. Initialize Instance Manager (no runtime arguments needed for calc)
+  std::string app_id = "mechanix_calculator";
+  auto* mechanix_common = mechanix::MechanixCommon::GetInstance();
+
+  std::vector<std::string> args;
+  for (int i = 1; i < argc; ++i) {
+    args.emplace_back(argv[i]);
+  }
+
+  // 2. Check if another instance is running
+  if (!mechanix_common->RegisterSingletonCheck(app_id, args)) {
+    return 0;
+  }
+
   FlutterEmbedderOptions options;
   if (!options.Parse(argc, argv))
   {
