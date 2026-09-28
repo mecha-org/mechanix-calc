@@ -107,9 +107,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (_expressionNotifier.value.isNotEmpty) {
       final expr = _expressionNotifier.value;
       _expressionNotifier.value = '';
-      context.read<CalculatorBloc>().add(
-        CalculateResult(expr),
-      );
+      context.read<CalculatorBloc>().add(CalculateResult(expr));
     }
   }
 
@@ -203,8 +201,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                                       blocState.history.isNotEmpty;
                                   final displayExpression =
                                       expression.isNotEmpty
-                                          ? expression
-                                          : blocState.expression;
+                                      ? expression
+                                      : blocState.expression;
 
                                   return DisplayPanel(
                                     expression: displayExpression,
@@ -256,7 +254,7 @@ class _CalculatorAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _CalculatorAppBar({required this.isHistoryOpenNotifier});
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const MechanixAppBar().preferredSize;
 
   @override
   Widget build(BuildContext context) {
