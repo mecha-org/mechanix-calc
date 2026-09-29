@@ -181,6 +181,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             child: Column(
               children: [
                 Expanded(
+                  flex: 3,
                   child: BlocBuilder<CalculatorBloc, CalculatorState>(
                     buildWhen: (prev, curr) =>
                         prev.result != curr.result ||
@@ -228,8 +229,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     },
                   ),
                 ),
-                SizedBox(
-                  height: 304,
+                Expanded(
+                  flex: 4,
                   child: Listener(
                     onPointerDown: (_) {
                       if (_isHistoryOpenNotifier.value) {

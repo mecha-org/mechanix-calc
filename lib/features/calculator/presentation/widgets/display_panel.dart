@@ -133,14 +133,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: widget.onDismissHistory,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 64),
-              child: SingleChildScrollView(
-                reverse: true,
-                physics: const NeverScrollableScrollPhysics(),
-                child: displayContent,
-              ),
-            ),
+            child: displayContent,
           ),
         ],
       );
@@ -218,24 +211,21 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
 
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
-      child: SizedBox(
-        width: double.infinity,
-        child: Scrollbar(
-          controller: _scrollController,
-          thumbVisibility: true,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
-            ),
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.only(top: 8, bottom: 8),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
-              },
-            ),
+      child: Scrollbar(
+        controller: _scrollController,
+        thumbVisibility: true,
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(
+            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+          ),
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
+            },
           ),
         ),
       ),
