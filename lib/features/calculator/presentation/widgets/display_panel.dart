@@ -163,7 +163,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
       onTap: widget.onDismissHistory,
       child: Scrollbar(
         controller: _scrollController,
-        thumbVisibility: true,
+        thumbVisibility: false,
         child: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
             dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
