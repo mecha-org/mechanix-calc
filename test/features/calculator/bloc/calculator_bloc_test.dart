@@ -26,7 +26,7 @@ void main() {
     test('CalculateResult performs addition correctly', () {
       final expectedStates = [
         isA<CalculatorState>()
-            .having((s) => s.expression, 'expression', '')
+            .having((s) => s.expression, 'expression', '5+3')
             .having((s) => s.result, 'result', '8')
             .having((s) => s.history.length, 'history length', 1)
             .having((s) => s.history.first.expression, 'history expr', '5+3')
@@ -41,7 +41,7 @@ void main() {
     test('ClearPressed should NOT clear history', () async {
       final expectedStates = [
         isA<CalculatorState>()
-            .having((s) => s.expression, 'expression', '')
+            .having((s) => s.expression, 'expression', '5+3')
             .having((s) => s.result, 'result', '8')
             .having((s) => s.history.length, 'history length', 1),
         isA<CalculatorState>()
@@ -158,7 +158,7 @@ void main() {
     test('calculates expression with percentage correctly', () {
       final expectedStates = [
         isA<CalculatorState>()
-            .having((s) => s.expression, 'expression', '')
+            .having((s) => s.expression, 'expression', '200×50%')
             .having((s) => s.result, 'result', '100')
             .having((s) => s.history.length, 'history length', 1),
       ];
@@ -178,7 +178,7 @@ void main() {
       test('formats large whole numbers with comma separators', () {
         final expectedStates = [
           isA<CalculatorState>()
-              .having((s) => s.expression, 'expression', '')
+              .having((s) => s.expression, 'expression', '1000+2000')
               .having((s) => s.result, 'result', '3,000')
               .having((s) => s.history.first.result, 'history result', '3,000'),
         ];

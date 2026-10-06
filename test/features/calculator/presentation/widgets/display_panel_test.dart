@@ -38,7 +38,6 @@ void main() {
               expression: '',
               result: '0',
               errorMessage: '',
-              isCalculated: false,
               history: [HistoryItem(expression: '3+5', result: '8')],
             ),
           ),
@@ -60,7 +59,6 @@ void main() {
                 expression: '',
                 result: '0',
                 errorMessage: '',
-                isCalculated: false,
                 history: [HistoryItem(expression: '2-2', result: '0')],
               ),
             ),
@@ -74,16 +72,15 @@ void main() {
     );
 
     testWidgets(
-      'shows previous expression and result for completed calculation',
+      'shows calculated expression on top and result on bottom for completed calculation',
       (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
               body: DisplayPanel(
-                expression: '',
+                calculatedExpression: '12.95 × 10',
                 result: '12,950',
                 errorMessage: '',
-                isCalculated: true,
                 history: [
                   HistoryItem(expression: '12.95 × 10', result: '12,950'),
                 ],
@@ -99,16 +96,15 @@ void main() {
     );
 
     testWidgets(
-      'shows previous expression and 0 result for completed calculation with result 0 (e.g. 2-2=0)',
+      'shows calculated expression and 0 result for completed calculation with result 0 (e.g. 2-2=0)',
       (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
               body: DisplayPanel(
-                expression: '',
+                calculatedExpression: '2-2',
                 result: '0',
                 errorMessage: '',
-                isCalculated: true,
                 history: [HistoryItem(expression: '2-2', result: '0')],
               ),
             ),

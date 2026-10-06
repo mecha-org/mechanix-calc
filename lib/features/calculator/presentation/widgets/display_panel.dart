@@ -8,22 +8,22 @@ import '../../bloc/calculator_state.dart';
 
 class DisplayPanel extends StatefulWidget {
   final String expression;
+  final String calculatedExpression;
   final String result;
   final String errorMessage;
   final List<HistoryItem> history;
   final bool isHistoryOpen;
-  final bool isCalculated;
   final ValueChanged<String>? onHistoryItemTap;
   final VoidCallback? onDismissHistory;
 
   const DisplayPanel({
     super.key,
-    required this.expression,
+    this.expression = '',
+    this.calculatedExpression = '',
     required this.result,
     required this.errorMessage,
     this.history = const [],
     this.isHistoryOpen = false,
-    this.isCalculated = false,
     this.onHistoryItemTap,
     this.onDismissHistory,
   });
@@ -76,13 +76,15 @@ class _DisplayPanelState extends State<DisplayPanel> {
 
     if (widget.errorMessage.isNotEmpty &&
         widget.errorMessage == invalidOperationsErrorMessage) {
-      topExpression = widget.expression;
+      topExpression = widget.expression.isNotEmpty
+          ? widget.expression
+          : widget.calculatedExpression;
       bottomText = _getErrorMessage(l10n, widget.errorMessage);
     } else if (widget.expression.isNotEmpty) {
       topExpression = '';
       bottomText = widget.expression;
-    } else if (widget.isCalculated && widget.history.isNotEmpty) {
-      topExpression = widget.history.first.expression;
+    } else if (widget.calculatedExpression.isNotEmpty) {
+      topExpression = widget.calculatedExpression;
       bottomText = widget.result.isNotEmpty ? widget.result : '0';
     } else {
       topExpression = '';
@@ -176,8 +178,6 @@ class _DisplayPanelState extends State<DisplayPanel> {
         ),
       ),
     );
-    //   },
-    // );
   }
 }
 

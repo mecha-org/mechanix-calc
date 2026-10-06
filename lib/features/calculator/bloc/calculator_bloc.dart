@@ -22,7 +22,6 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         expression: '',
         result: '0',
         errorMessage: '',
-        isCalculated: false,
       ),
     );
   }
@@ -75,7 +74,6 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
             expression: expressionToEvaluate,
             result: '',
             errorMessage: invalidOperationsErrorMessage,
-            isCalculated: false,
           ),
         );
         return;
@@ -107,11 +105,10 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
       emit(
         state.copyWith(
-          expression: '',
+          expression: expressionToEvaluate,
           result: result,
           history: updatedHistory,
           errorMessage: '',
-          isCalculated: true,
         ),
       );
     } catch (e) {
@@ -121,7 +118,6 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
           expression: expressionToEvaluate,
           result: '',
           errorMessage: invalidOperationsErrorMessage,
-          isCalculated: false,
         ),
       );
     }

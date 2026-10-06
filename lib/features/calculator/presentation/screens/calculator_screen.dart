@@ -203,10 +203,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           flex: 1,
                           child: BlocBuilder<CalculatorBloc, CalculatorState>(
                             buildWhen: (prev, curr) =>
+                                prev.expression != curr.expression ||
                                 prev.result != curr.result ||
                                 prev.history != curr.history ||
-                                prev.errorMessage != curr.errorMessage ||
-                                prev.isCalculated != curr.isCalculated,
+                                prev.errorMessage != curr.errorMessage,
                             builder: (context, blocState) {
                               return ValueListenableBuilder<String>(
                                 valueListenable: _expressionNotifier,
@@ -214,18 +214,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                                   return ValueListenableBuilder<String>(
                                     valueListenable: _errorMessageNotifier,
                                     builder: (context, errorMessage, _) {
-                                      final displayExpression =
-                                          expression.isNotEmpty
-                                          ? expression
-                                          : blocState.expression;
-
                                       return DisplayPanel(
-                                        expression: displayExpression,
+                                        expression: expression,
+                                        calculatedExpression:
+                                            blocState.expression,
                                         result: blocState.result,
-                                        errorMessage: errorMessage,
+                                        errorMessage: errorMessage.isNotEmpty
+                                            ? errorMessage
+                                            : blocState.errorMessage,
                                         history: blocState.history,
                                         isHistoryOpen: false,
-                                        isCalculated: blocState.isCalculated,
                                         onDismissHistory: () {
                                           _isHistoryOpenNotifier.value = false;
                                         },

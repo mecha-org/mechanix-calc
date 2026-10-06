@@ -445,6 +445,36 @@ void main() {
           );
         },
       );
+
+      testWidgets(
+        'AC button clears active expression and resets display to 0',
+        (tester) async {
+          await tester.pumpWidget(createScreen());
+
+          // Type 12.95 + 3
+          await tester.tap(find.widgetWithText(MechanixButton, '1'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(MechanixButton, '+'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.widgetWithText(MechanixButton, '3'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('1+3'), findsOneWidget);
+
+          // Tap AC
+          await tester.tap(find.widgetWithText(MechanixButton, 'AC'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('1+3'), findsNothing);
+          expect(
+            find.descendant(
+              of: find.byType(DisplayPanel),
+              matching: find.text('0'),
+            ),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }
