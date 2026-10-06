@@ -1,9 +1,10 @@
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:mechanix_calculator/main.dart' as app;
+import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_panel.dart';
+import 'package:mechanix_calculator/main.dart' as app;
+import 'package:widgets/widgets.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -14,13 +15,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // Find buttons and tap them
-      await tester.tap(find.text('1'));
+      await tester.tap(find.widgetWithText(MechanixButton, '1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.plus));
+      await tester.tap(find.widgetWithText(MechanixButton, '+'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('2'));
+      await tester.tap(find.widgetWithText(MechanixButton, '2'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.equal));
+      await tester.tap(find.widgetWithText(MechanixButton, '='));
       await tester.pumpAndSettle();
 
       // Verify the result (specifically in the main display, with larger font)
@@ -31,15 +32,22 @@ void main() {
         ),
         findsAtLeastNWidgets(1),
       );
+      expect(
+        find.descendant(
+          of: find.byType(DisplayPanel),
+          matching: find.text('1+2'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Clear functionality test', (tester) async {
       app.main();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('5'));
+      await tester.tap(find.widgetWithText(MechanixButton, '5'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('AC'));
+      await tester.tap(find.widgetWithText(MechanixButton, 'AC'));
       await tester.pumpAndSettle();
 
       // Should show '0' after clear in the display
@@ -56,9 +64,9 @@ void main() {
       app.main();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('1'));
+      await tester.tap(find.widgetWithText(MechanixButton, '1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('2'));
+      await tester.tap(find.widgetWithText(MechanixButton, '2'));
       await tester.pumpAndSettle();
 
       // Tap backspace icon
@@ -79,21 +87,21 @@ void main() {
       app.main();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('1'));
+      await tester.tap(find.widgetWithText(MechanixButton, '1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('0'));
+      await tester.tap(find.widgetWithText(MechanixButton, '0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.plus));
+      await tester.tap(find.widgetWithText(MechanixButton, '+'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('2'));
+      await tester.tap(find.widgetWithText(MechanixButton, '2'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('0'));
+      await tester.tap(find.widgetWithText(MechanixButton, '0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.multiply));
+      await tester.tap(find.widgetWithText(MechanixButton, '×'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('3'));
+      await tester.tap(find.widgetWithText(MechanixButton, '3'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.equal));
+      await tester.tap(find.widgetWithText(MechanixButton, '='));
       await tester.pumpAndSettle();
 
       // 10 + (20 * 3) = 70 (assuming standard operator precedence)
@@ -104,23 +112,30 @@ void main() {
         ),
         findsAtLeastNWidgets(1),
       );
+      expect(
+        find.descendant(
+          of: find.byType(DisplayPanel),
+          matching: find.text('10+20×3'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Division by zero error test', (tester) async {
       app.main();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('5'));
+      await tester.tap(find.widgetWithText(MechanixButton, '5'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.divide));
+      await tester.tap(find.widgetWithText(MechanixButton, '÷'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('0'));
+      await tester.tap(find.widgetWithText(MechanixButton, '0'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.equal));
+      await tester.tap(find.widgetWithText(MechanixButton, '='));
       await tester.pumpAndSettle();
 
       // Should show the error message
-      expect(find.text('Invalid mathematical operation'), findsOneWidget);
+      expect(find.text(invalidOperationsErrorMessage), findsOneWidget);
       // Expression should still be visible when error occurs
       expect(find.text('5÷0'), findsOneWidget);
     });
@@ -129,15 +144,15 @@ void main() {
       app.main();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('5'));
+      await tester.tap(find.widgetWithText(MechanixButton, '5'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.plus));
+      await tester.tap(find.widgetWithText(MechanixButton, '+'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(CupertinoIcons.equal));
+      await tester.tap(find.widgetWithText(MechanixButton, '='));
       await tester.pumpAndSettle();
 
       // Should show the error message
-      expect(find.text('Malformed expressions'), findsOneWidget);
+      expect(find.text(invalidOperationsErrorMessage), findsOneWidget);
       // Expression should still be visible when error occurs
       expect(find.text('5+'), findsOneWidget);
     });
