@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/l10n/app_localizations.dart';
 import 'package:widgets/widgets.dart';
+
 import '../../bloc/calculator_state.dart';
 
 class DisplayPanel extends StatefulWidget {
   final String expression;
+  final String calculatedExpression;
   final String result;
   final String errorMessage;
   final List<HistoryItem> history;
@@ -17,7 +19,8 @@ class DisplayPanel extends StatefulWidget {
 
   const DisplayPanel({
     super.key,
-    required this.expression,
+    this.expression = '',
+    this.calculatedExpression = '',
     required this.result,
     required this.errorMessage,
     this.history = const [],
@@ -61,25 +64,40 @@ class _DisplayPanelState extends State<DisplayPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isHistoryOpen) {
+      return HistoryOverlay(
+        history: widget.history,
+        onHistoryItemTap: widget.onHistoryItemTap,
+      );
+    }
+
     final l10n = AppLocalizations.of(context);
     final String topExpression;
     final String bottomText;
 
     if (widget.errorMessage.isNotEmpty &&
         widget.errorMessage == invalidOperationsErrorMessage) {
-      topExpression = widget.expression;
+      topExpression = widget.expression.isNotEmpty
+          ? widget.expression
+          : widget.calculatedExpression;
       bottomText = _getErrorMessage(l10n, widget.errorMessage);
     } else if (widget.expression.isNotEmpty) {
       topExpression = '';
       bottomText = widget.expression;
-    } else if (widget.history.isNotEmpty &&
-        widget.history.first.result == widget.result) {
-      topExpression = widget.history.first.expression;
+    } else if (widget.calculatedExpression.isNotEmpty) {
+      topExpression = widget.calculatedExpression;
       bottomText = widget.result.isNotEmpty ? widget.result : '0';
     } else {
       topExpression = '';
       bottomText = widget.result.isNotEmpty ? widget.result : '0';
     }
+
+    final displayMediumStyle = Theme.of(context).textTheme.displayMedium!
+        .copyWith(
+          fontFamily: MechanixFontFamily.geistMono,
+          fontSize: 52,
+          fontWeight: FontWeight.w400,
+        );
 
     final displayContent = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -87,7 +105,7 @@ class _DisplayPanelState extends State<DisplayPanel> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (topExpression.isNotEmpty && !widget.isHistoryOpen) ...[
+          if (topExpression.isNotEmpty) ...[
             Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -104,46 +122,27 @@ class _DisplayPanelState extends State<DisplayPanel> {
             ),
             const SizedBox(height: 8),
           ],
+
+          /// Use a small set of font sizes based on expression length
           Align(
             alignment: Alignment.centerRight,
             child: Text(
               bottomText,
-              textAlign: TextAlign.end,
-              softWrap: true,
-              overflow: TextOverflow.visible,
-              style: Theme.of(
-                context,
-              ).textTheme.displayMedium!.copyWith(fontFamily: 'GeistMono'),
+              style: displayMediumStyle.copyWith(
+                fontSize: getDisplayFontSize(bottomText),
+              ),
             ),
           ),
         ],
       ),
     );
 
-    if (widget.isHistoryOpen) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: HistoryOverlay(
-              history: widget.history,
-              onHistoryItemTap: widget.onHistoryItemTap,
-            ),
-          ),
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: widget.onDismissHistory,
-            child: displayContent,
-          ),
-        ],
-      );
-    }
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: widget.onDismissHistory,
       child: Scrollbar(
         controller: _scrollController,
-        thumbVisibility: true,
+        thumbVisibility: false,
         child: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
             dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
@@ -179,6 +178,7 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
@@ -187,6 +187,7 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
   @override
   void didUpdateWidget(covariant HistoryOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (widget.history != oldWidget.history) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
@@ -196,6 +197,7 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
 
   void _scrollToBottom() {
     if (!mounted || !_scrollController.hasClients) return;
+
     _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }
 
@@ -224,6 +226,7 @@ class _HistoryOverlayState extends State<HistoryOverlay> {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
+
               return _HistoryTile(item: item, onTap: widget.onHistoryItemTap);
             },
           ),
@@ -292,6 +295,7 @@ class _HistoryTile extends StatelessWidget {
 
 String _getErrorMessage(AppLocalizations? l10n, String key) {
   if (l10n == null) return key;
+
   switch (key) {
     case maxDigitsErrorMessage:
       return l10n.maxDigitsErrorMessage;
@@ -304,4 +308,11 @@ String _getErrorMessage(AppLocalizations? l10n, String key) {
     default:
       return l10n.invalidOperationsErrorMessage;
   }
+}
+
+double getDisplayFontSize(String text) {
+  if (text.length > 60) return 24;
+  if (text.length > 40) return 32;
+  if (text.length > 16) return 40;
+  return 52;
 }

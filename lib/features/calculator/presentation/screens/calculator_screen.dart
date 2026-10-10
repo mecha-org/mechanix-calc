@@ -88,7 +88,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    final res = ExpressionBuilder.handleToggleSign(_expressionNotifier.value);
+    String currentExpr = _expressionNotifier.value;
+    if (currentExpr.isEmpty) {
+      final previousResult = context.read<CalculatorBloc>().state.result;
+      if (previousResult.isNotEmpty && previousResult != '0') {
+        currentExpr = previousResult.replaceAll(',', '');
+      }
+    }
+    final res = ExpressionBuilder.handleToggleSign(currentExpr);
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
   }
@@ -178,73 +185,151 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           autofocus: true,
           onKeyEvent: _handleKeyEvent,
           child: SafeArea(
-            child: Column(
+            child: Stack(
               children: [
-                Expanded(
-                  flex: 3,
-                  child: BlocBuilder<CalculatorBloc, CalculatorState>(
-                    buildWhen: (prev, curr) =>
-                        prev.result != curr.result ||
-                        prev.history != curr.history ||
-                        prev.errorMessage != curr.errorMessage,
-                    builder: (context, blocState) {
-                      return ValueListenableBuilder<bool>(
-                        valueListenable: _isHistoryOpenNotifier,
-                        builder: (context, isHistoryOpen, _) {
-                          return ValueListenableBuilder<String>(
-                            valueListenable: _expressionNotifier,
-                            builder: (context, expression, _) {
-                              return ValueListenableBuilder<String>(
-                                valueListenable: _errorMessageNotifier,
-                                builder: (context, errorMessage, _) {
-                                  final isOpen =
-                                      isHistoryOpen &&
-                                      blocState.history.isNotEmpty;
-                                  final displayExpression =
-                                      expression.isNotEmpty
-                                      ? expression
-                                      : blocState.expression;
-
-                                  return DisplayPanel(
-                                    expression: displayExpression,
-                                    result: blocState.result,
-                                    errorMessage: errorMessage,
-                                    history: blocState.history,
-                                    isHistoryOpen: isOpen,
-                                    onDismissHistory: () {
-                                      _isHistoryOpenNotifier.value = false;
-                                    },
-                                    onHistoryItemTap: (expr) {
-                                      _expressionNotifier.value = expr;
-                                      _errorMessageNotifier.value = '';
-                                      _isHistoryOpenNotifier.value = false;
-                                    },
-                                  );
-                                },
-                              );
-                            },
-                          );
+                Column(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: _DisplayPanelSection(
+                        expressionNotifier: _expressionNotifier,
+                        errorMessageNotifier: _errorMessageNotifier,
+                        isHistoryOpenNotifier: _isHistoryOpenNotifier,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: Listener(
+                        onPointerDown: (_) {
+                          if (_isHistoryOpenNotifier.value) {
+                            _isHistoryOpenNotifier.value = false;
+                          }
                         },
-                      );
-                    },
-                  ),
+                        child: ButtonGrid(onButtonPressed: _handleButtonAction),
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  flex: 4,
-                  child: Listener(
-                    onPointerDown: (_) {
-                      if (_isHistoryOpenNotifier.value) {
-                        _isHistoryOpenNotifier.value = false;
-                      }
-                    },
-                    child: ButtonGrid(onButtonPressed: _handleButtonAction),
-                  ),
+                _HistoryOverlaySection(
+                  isHistoryOpenNotifier: _isHistoryOpenNotifier,
+                  expressionNotifier: _expressionNotifier,
+                  errorMessageNotifier: _errorMessageNotifier,
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DisplayPanelSection extends StatelessWidget {
+  final ValueNotifier<String> expressionNotifier;
+  final ValueNotifier<String> errorMessageNotifier;
+  final ValueNotifier<bool> isHistoryOpenNotifier;
+
+  const _DisplayPanelSection({
+    required this.expressionNotifier,
+    required this.errorMessageNotifier,
+    required this.isHistoryOpenNotifier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      CalculatorBloc,
+      CalculatorState,
+      ({
+        String expression,
+        String result,
+        List<HistoryItem> history,
+        String errorMessage,
+      })
+    >(
+      selector: (state) => (
+        expression: state.expression,
+        result: state.result,
+        history: state.history,
+        errorMessage: state.errorMessage,
+      ),
+      builder: (context, state) {
+        return ValueListenableBuilder<String>(
+          valueListenable: expressionNotifier,
+          builder: (context, expression, _) {
+            return ValueListenableBuilder<String>(
+              valueListenable: errorMessageNotifier,
+              builder: (context, errorMessage, _) {
+                return DisplayPanel(
+                  expression: expression,
+                  calculatedExpression: state.expression,
+                  result: state.result,
+                  errorMessage: errorMessage.isNotEmpty
+                      ? errorMessage
+                      : state.errorMessage,
+                  history: state.history,
+                  isHistoryOpen: false,
+                  onDismissHistory: () {
+                    isHistoryOpenNotifier.value = false;
+                  },
+                  onHistoryItemTap: (expr) {
+                    expressionNotifier.value = expr;
+                    errorMessageNotifier.value = '';
+                    isHistoryOpenNotifier.value = false;
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _HistoryOverlaySection extends StatelessWidget {
+  final ValueNotifier<bool> isHistoryOpenNotifier;
+  final ValueNotifier<String> expressionNotifier;
+  final ValueNotifier<String> errorMessageNotifier;
+
+  const _HistoryOverlaySection({
+    required this.isHistoryOpenNotifier,
+    required this.expressionNotifier,
+    required this.errorMessageNotifier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CalculatorBloc, CalculatorState, List<HistoryItem>>(
+      selector: (state) => state.history,
+      builder: (context, history) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: isHistoryOpenNotifier,
+          builder: (context, isHistoryOpen, _) {
+            if (!isHistoryOpen || history.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned.fill(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: FractionallySizedBox(
+                  widthFactor: 1.0,
+                  heightFactor: 0.36,
+                  child: HistoryOverlay(
+                    history: history,
+                    onHistoryItemTap: (expr) {
+                      expressionNotifier.value = expr;
+                      errorMessageNotifier.value = '';
+                      isHistoryOpenNotifier.value = false;
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
