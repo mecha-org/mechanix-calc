@@ -44,5 +44,10 @@ class CalculatorState extends Equatable {
   }
 
   @override
-  List<Object> get props => [expression, result, errorMessage, history];
+  List<Object> get props => [
+    expression,
+    result,
+    errorMessage,
+    history,
+  ];
 }

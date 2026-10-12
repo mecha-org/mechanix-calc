@@ -39,6 +39,13 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
           .replaceAll('×', '*')
           .replaceAll('÷', '/');
 
+      // Convert leading decimal values to valid numeric expressions.
+      // Example: 4*.2 -> 4*0.2
+      finalExpression = finalExpression.replaceAllMapped(
+        _leadingDecimalPattern,
+        (_) => '0.',
+      );
+
       // Convert percentage values to division by 100 for evaluation.
       finalExpression = finalExpression.replaceAllMapped(
         _percentPattern,
@@ -95,7 +102,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
       emit(
         state.copyWith(
-          expression: '',
+          expression: expressionToEvaluate,
           result: result,
           history: updatedHistory,
           errorMessage: '',
