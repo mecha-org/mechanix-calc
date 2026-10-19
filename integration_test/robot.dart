@@ -1,134 +1,161 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_panel.dart';
 import 'package:mechanix_calculator/main.dart' as app;
 import 'package:widgets/widgets.dart';
 
-/// Single source of truth for key labels as rendered on screen
-/// If a glyph changes in the UI, update it here only
+/// Single source of truth for keys. Labels verified against button_grid.dart.
 abstract final class Keys {
+  // --- Text keys -------------------------------------------------------------
   static const clear = 'AC';
   static const toggleSign = '+/-';
   static const divide = '÷';
   static const multiply = '×';
-//   static const subtract = '−'; // NOTE: U+2212. Change to '-' if the button uses ASCII.
-  static const subtract = '-'; // ASCII hyphen (verified in button_grid.dart).
+  static const subtract = '-'; // ASCII hyphen (verified).
   static const add = '+';
   static const equals = '=';
   static const decimal = '.';
   static const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
-  /// All text-labelled buttons.
   static const allTextKeys = [
     clear, toggleSign, divide, multiply,
     subtract, add, equals, decimal, ...digits,
   ];
 
-  // Icon-only buttons (source: button_grid.dart).
+  // --- Icon keys -------------------------------------------------------------
   static const percentIcon = Icons.percent;
   static const backspaceIcon = Icons.backspace_outlined;
   static const historyIcon = Icons.history;
 
   static const allIconKeys = [percentIcon, backspaceIcon, historyIcon];
+
+  // --- Input tokens for CalculatorRobot.enter() ------------------------------
+  // Single chars standing in for icon / multi-char keys, so a whole
+  // interaction reads as one string: enter('5±+50%⌫').
+  static const tokenPercent = '%';
+  static const tokenToggleSign = '±';
+  static const tokenBackspace = '⌫';
 }
 
 /// Page-object for the calculator screen.
-///
-/// creating a small Calculator API for our tests
-/// so UI changes are fixed in one place and tests read like specs.
+/// Tests describe behaviour; all finders, taps and pumps live here.
 class CalculatorRobot {
   CalculatorRobot(this.tester);
 
   final WidgetTester tester;
 
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
   // Finders
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
 
   Finder key(String label) => find.widgetWithText(MechanixButton, label);
   Finder get percentKey => find.byIcon(Keys.percentIcon);
   Finder get backspaceKey => find.byIcon(Keys.backspaceIcon);
   Finder get historyIcon => find.byIcon(Keys.historyIcon);
 
-  /// Text scoped to the display only, so button labels / history never collide.
+  /// Text inside the display only (ignores button labels / history).
   Finder displayText(String text) => find.descendant(
         of: find.byType(DisplayPanel),
         matching: find.text(text),
       );
 
-  // ---------------------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------------------
+  /// Resolves an input token (see [Keys]) to its button finder.
+  Finder _finderForToken(String token) => switch (token) {
+        Keys.tokenPercent => percentKey,
+        Keys.tokenBackspace => backspaceKey,
+        Keys.tokenToggleSign => key(Keys.toggleSign),
+        _ => key(token),
+      };
 
-  /// Boots the app. Swap to `tester.pumpWidget(const <AppWidget>())`
-  /// once the root widget name is confirmed (avoids state leaking via main()).
+  // ===========================================================================
+  // Actions
+  // ===========================================================================
+
+  /// Boots the app.
+  /// TODO: switch to tester.pumpWidget(const <RootWidget>()) to avoid
+  /// state (e.g. history) leaking between tests via main().
   Future<void> launch() async {
     app.main();
     await tester.pumpAndSettle();
   }
 
-  /// Taps a single key by its label.
-  Future<void> tapKey(String label) async {
-    await tester.tap(key(label));
-    await tester.pump();
-  }
-
-  /// Types a sequence of single-character keys, e.g. `enter('10+20×3')`.
-  /// Multi-char keys (AC, +/-) have dedicated methods below.
+  /// Types a key sequence, e.g. enter('10+20×3') or enter('5±+50%').
+  /// Fails fast with a clear message if a token has no matching key.
   Future<void> enter(String sequence) async {
-    for (final char in sequence.characters) {
-      await tapKey(char);
+    for (final token in sequence.characters) {
+      final finder = _finderForToken(token);
+      expect(finder, findsOneWidget, reason: 'No key for token "$token"');
+      await tester.tap(finder);
+      await tester.pump();
     }
     await tester.pumpAndSettle();
   }
 
-  Future<void> pressEquals() async {
-    await tapKey(Keys.equals);
-    await tester.pumpAndSettle();
-  }
+  Future<void> pressEquals() => _tapAndSettle(key(Keys.equals));
+  Future<void> pressClear() => _tapAndSettle(key(Keys.clear));
+  Future<void> pressBackspace() => _tapAndSettle(backspaceKey);
+  Future<void> pressPercent() => _tapAndSettle(percentKey);
+  Future<void> pressToggleSign() => _tapAndSettle(key(Keys.toggleSign));
+  Future<void> openHistory() => _tapAndSettle(historyIcon);
 
-  Future<void> pressClear() async {
-    await tapKey(Keys.clear);
-    await tester.pumpAndSettle();
-  }
-
-  Future<void> pressBackspace() async {
-    await tester.tap(backspaceKey);
-    await tester.pumpAndSettle();
-  }
-
-  Future<void> pressPercent() async {
-    await tester.tap(percentKey);
-    await tester.pumpAndSettle();
-  }
-
-  /// Convenience: enter an expression and evaluate it.
+  /// Enter an expression and evaluate it.
   Future<void> calculate(String expression) async {
     await enter(expression);
     await pressEquals();
   }
 
-  // ---------------------------------------------------------------------------
-  // Assertions
-  // ---------------------------------------------------------------------------
+  Future<void> _tapAndSettle(Finder finder) async {
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
 
-  /// Upper (small) line showing the typed expression.
+  // ===========================================================================
+  // Assertions
+  // ===========================================================================
+
+  /// Upper (small) line: the typed expression.
   void expectExpression(String expression) =>
       expect(displayText(expression), findsOneWidget,
           reason: 'Expression line should show "$expression"');
 
-  /// Lower (large) line showing the result.
+  /// Lower (large) line: current input or result.
   /// atLeast(1): a live preview may render the same value twice.
   void expectResult(String result) =>
       expect(displayText(result), findsAtLeastNWidgets(1),
-          reason: 'Result line should show "$result"');
+          reason: 'Main line should show "$result"');
 
-  void expectError(String message) =>
-      expect(displayText(message), findsOneWidget,
-          reason: 'Error message should be shown in display');
+  void expectNotInDisplay(String text) =>
+      expect(displayText(text), findsNothing,
+          reason: '"$text" should be cleared from display');
 
-  /// Checks every text + icon key and fails ONCE listing all missing ones
-  /// (avoids one device run per missing key).
+  void expectError() =>
+      expect(displayText(invalidOperationsErrorMessage), findsOneWidget,
+          reason: 'Error message should be shown');
+
+  void expectNoError() =>
+      expect(find.text(invalidOperationsErrorMessage), findsNothing,
+          reason: 'No error message expected');
+
+  /// Catches layout overflow / build errors (e.g. very long numbers).
+  void expectNoFrameworkErrors() =>
+      expect(tester.takeException(), isNull,
+          reason: 'Framework threw (overflow / build error)');
+
+  /// Text appears OUTSIDE the display, i.e. in the history view.
+  void expectInHistory(String text) {
+    final all = find.textContaining(text).evaluate();
+    final inDisplay = find
+        .descendant(
+            of: find.byType(DisplayPanel),
+            matching: find.textContaining(text))
+        .evaluate()
+        .toSet();
+    expect(all.where((e) => !inDisplay.contains(e)), isNotEmpty,
+        reason: '"$text" should be listed in history');
+  }
+
+  /// Every text + icon key renders exactly once; reports all misses at once.
   void expectAllKeysVisible() {
     final missing = <String>[
       for (final label in Keys.allTextKeys)
