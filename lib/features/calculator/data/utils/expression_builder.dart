@@ -5,51 +5,36 @@ class ExpressionResult extends Equatable {
   final String expression;
   final String errorMessage;
 
-  const ExpressionResult({
-    required this.expression,
-    this.errorMessage = '',
-  });
+  const ExpressionResult({required this.expression, this.errorMessage = ''});
 
   @override
   List<Object?> get props => [expression, errorMessage];
 }
 
 class ExpressionBuilder {
-  static const _operators = ['+', '-', '×', '÷', '%'];
+  static const Set<String> _operators = {'+', '-', '×', '÷', '%', '*', '/'};
   static final _operatorSplitPattern = RegExp(r'[+\-×÷%()]');
 
   static int countOperations(String expression) {
     if (expression.isEmpty) return 0;
 
     int count = 0;
+
     for (int i = 0; i < expression.length; i++) {
       final char = expression[i];
-      if (char == '+' ||
-          char == '×' ||
-          char == '÷' ||
-          char == '%' ||
-          char == '*' ||
-          char == '/') {
-        count++;
-      } else if (char == '-') {
-        // '-' is a binary operator only when:
-        // 1. Not at index 0
-        // 2. Not preceded by another operator or '('
-        if (i > 0) {
-          final prev = expression[i - 1];
-          if (prev != '+' &&
-              prev != '-' &&
-              prev != '×' &&
-              prev != '÷' &&
-              prev != '%' &&
-              prev != '*' &&
-              prev != '/' &&
-              prev != '(') {
-            count++;
-          }
-        }
+
+      if (!_operators.contains(char)) continue;
+
+      if (char == '-' &&
+          (i == 0 ||
+              _operators.contains(expression[i - 1]) ||
+              expression[i - 1] == '(')) {
+        continue;
       }
+
+      count++;
     }
+
     return count;
   }
 
@@ -77,7 +62,10 @@ class ExpressionBuilder {
     return null;
   }
 
-  static ExpressionResult handleNumber(String currentExpression, String number) {
+  static ExpressionResult handleNumber(
+    String currentExpression,
+    String number,
+  ) {
     String resultingExpression;
 
     if (number == '.') {
@@ -103,7 +91,9 @@ class ExpressionBuilder {
           resultingExpression = '$currentExpression.';
         }
       } else if (currentExpression.isNotEmpty &&
-          _operators.contains(currentExpression[currentExpression.length - 1])) {
+          _operators.contains(
+            currentExpression[currentExpression.length - 1],
+          )) {
         resultingExpression = '${currentExpression}0.';
       } else {
         resultingExpression = '$currentExpression.';
@@ -130,7 +120,10 @@ class ExpressionBuilder {
 
     final error = validateExpressionLimits(resultingExpression);
     if (error != null) {
-      return ExpressionResult(expression: currentExpression, errorMessage: error);
+      return ExpressionResult(
+        expression: currentExpression,
+        errorMessage: error,
+      );
     }
 
     return ExpressionResult(expression: resultingExpression);
@@ -158,11 +151,14 @@ class ExpressionBuilder {
     } else if (currentExpression == '(-' || currentExpression == '-') {
       return const ExpressionResult(expression: '');
     } else if (currentExpression.endsWith('(-')) {
-      resultingExpression =
-          currentExpression.substring(0, currentExpression.length - 2);
+      resultingExpression = currentExpression.substring(
+        0,
+        currentExpression.length - 2,
+      );
       if (resultingExpression.isNotEmpty &&
           _operators.contains(
-              resultingExpression[resultingExpression.length - 1])) {
+            resultingExpression[resultingExpression.length - 1],
+          )) {
         resultingExpression =
             resultingExpression.substring(0, resultingExpression.length - 1) +
             operator;
@@ -182,7 +178,10 @@ class ExpressionBuilder {
 
     final error = validateExpressionLimits(resultingExpression);
     if (error != null) {
-      return ExpressionResult(expression: currentExpression, errorMessage: error);
+      return ExpressionResult(
+        expression: currentExpression,
+        errorMessage: error,
+      );
     }
 
     return ExpressionResult(expression: resultingExpression);
@@ -212,7 +211,10 @@ class ExpressionBuilder {
 
     if (currentExpression.endsWith('(-')) {
       return ExpressionResult(
-        expression: currentExpression.substring(0, currentExpression.length - 2),
+        expression: currentExpression.substring(
+          0,
+          currentExpression.length - 2,
+        ),
       );
     }
 
@@ -236,7 +238,10 @@ class ExpressionBuilder {
     // 1. If expression ends with an operator followed by '(-', e.g. "5×(-", remove '(-' -> "5×"
     if (currentExpression.endsWith('(-')) {
       return ExpressionResult(
-        expression: currentExpression.substring(0, currentExpression.length - 2),
+        expression: currentExpression.substring(
+          0,
+          currentExpression.length - 2,
+        ),
       );
     }
 
@@ -246,15 +251,19 @@ class ExpressionBuilder {
       final resultingExpression = '$currentExpression(-';
       final error = validateExpressionLimits(resultingExpression);
       if (error != null) {
-        return ExpressionResult(expression: currentExpression, errorMessage: error);
+        return ExpressionResult(
+          expression: currentExpression,
+          errorMessage: error,
+        );
       }
       return ExpressionResult(expression: resultingExpression);
     }
 
     // 3. If expression ends with a parenthesized negative number "(-<digits>)"
     // e.g. "(-5)" -> "5", "2×(-5)" -> "2×5", "(-5)×(-5)" -> "(-5)×5"
-    final parenNegMatch =
-        RegExp(r'\(-([0-9.]+)\)$').firstMatch(currentExpression);
+    final parenNegMatch = RegExp(
+      r'\(-([0-9.]+)\)$',
+    ).firstMatch(currentExpression);
     if (parenNegMatch != null) {
       final innerNumber = parenNegMatch.group(1)!;
       final prefix = currentExpression.substring(0, parenNegMatch.start);
@@ -284,7 +293,10 @@ class ExpressionBuilder {
 
     final error = validateExpressionLimits(resultingExpression);
     if (error != null) {
-      return ExpressionResult(expression: currentExpression, errorMessage: error);
+      return ExpressionResult(
+        expression: currentExpression,
+        errorMessage: error,
+      );
     }
 
     return ExpressionResult(expression: resultingExpression);
@@ -298,7 +310,10 @@ class ExpressionBuilder {
     final resultingExpression = '$currentExpression%';
     final error = validateExpressionLimits(resultingExpression);
     if (error != null) {
-      return ExpressionResult(expression: currentExpression, errorMessage: error);
+      return ExpressionResult(
+        expression: currentExpression,
+        errorMessage: error,
+      );
     }
 
     return ExpressionResult(expression: resultingExpression);

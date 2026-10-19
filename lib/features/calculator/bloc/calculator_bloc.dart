@@ -15,15 +15,12 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     r'(\d{1,3})(?=(\d{3})+(?!\d))',
   );
   static final _leadingDecimalPattern = RegExp(r'(?<=[+\-*/])\.');
+  static final _negativeNumberPattern = RegExp(
+    r'(?<=[+\-*/])-(?:\d+(?:\.\d+)?|\.\d+)',
+  );
 
   void _onClearPressed(ClearPressed event, Emitter<CalculatorState> emit) {
-    emit(
-      state.copyWith(
-        expression: '',
-        result: '0',
-        errorMessage: '',
-      ),
-    );
+    emit(state.copyWith(expression: '', result: '0', errorMessage: ''));
   }
 
   void _onCalculateResult(
@@ -58,7 +55,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       // Wrap negative numbers that follow an operator in parentheses for evaluation.
       // E.g., -2*-2 -> -2*(-2), 5+-3 -> 5+(-3), 10/-2 -> 10/(-2), 5--3 -> 5-(-3)
       finalExpression = finalExpression.replaceAllMapped(
-        RegExp(r'(?<=[+\-*/])-(?:\d+(?:\.\d+)?|\.\d+)'),
+        _negativeNumberPattern,
         (match) => '(${match.group(0)})',
       );
 
