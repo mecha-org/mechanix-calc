@@ -321,6 +321,10 @@ void main() {
         expect(res.expression, '5.25');
       });
 
+      test('handlePercentage appends % after a bracketed number', () {
+        expect(ExpressionBuilder.handlePercentage('(-5)').expression, '(-5)%');
+      });
+
       test('handlePercentage appends %', () {
         final res = ExpressionBuilder.handlePercentage('50');
         expect(res.expression, '50%');
@@ -403,6 +407,63 @@ void main() {
           ExpressionBuilder.handleToggleSign('-9.9×10¹⁷').expression,
           '9.9×10¹⁷',
         );
+      });
+    });
+
+    group('scientific numbers are single tokens', () {
+      List<String> backspaceSteps(String expression) {
+        final steps = [expression];
+        while (steps.last.isNotEmpty) {
+          steps.add(ExpressionBuilder.handleDelete(steps.last).expression);
+        }
+        return steps;
+      }
+
+      test('backspace removes exponent digits one by one, then the rest', () {
+        expect(backspaceSteps('9.9×10¹⁷'), [
+          '9.9×10¹⁷',
+          '9.9×10¹',
+          '9.9×10',
+          '9.9×1',
+          '9.9×',
+          '9.9',
+          '9.',
+          '9',
+          '',
+        ]);
+      });
+
+      test('backspace inside a negated scientific number keeps parens', () {
+        expect(backspaceSteps('2×(-9.9×10¹⁷)'), [
+          '2×(-9.9×10¹⁷)',
+          '2×(-9.9×10¹)',
+          '2×(-9.9×10)',
+          '2×(-9.9×1)',
+          '2×(-9.9×)',
+          '2×(-9.9)',
+          '2×(-9.)',
+          '2×(-9)',
+          '2×',
+          '2',
+          '',
+        ]);
+      });
+
+      test('backspace drops a lone exponent sign', () {
+        expect(ExpressionBuilder.handleDelete('1.2×10⁻⁷').expression, '1.2×10');
+      });
+
+      test('% cannot follow an exponent', () {
+        expect(
+          ExpressionBuilder.handlePercentage('9.9×10¹⁷').expression,
+          '9.9×10¹⁷',
+        );
+      });
+
+      test('× inside a scientific number is not counted as an operation', () {
+        expect(ExpressionBuilder.countOperations('9.9×10¹⁷'), 0);
+        expect(ExpressionBuilder.countOperations('9.9×10¹⁷+1'), 1);
+        expect(ExpressionBuilder.countOperations('5×10'), 1);
       });
     });
   });

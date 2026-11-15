@@ -334,6 +334,7 @@ class ExponentText extends StatelessWidget {
     final fontSize = style.fontSize ?? 14;
     final spans = <InlineSpan>[];
     var last = 0;
+    var index = 0;
     for (final match in _exponentRun.allMatches(text)) {
       if (match.start > last) {
         spans.add(TextSpan(text: text.substring(last, match.start)));
@@ -345,7 +346,8 @@ class ExponentText extends StatelessWidget {
             padding: EdgeInsets.only(left: fontSize * 0.04),
             child: Text(
               ResultFormatter.fromSuperscript(match[0]!),
-              key: const Key('exponent'),
+              // Unique per exponent: text can hold several ("…×10¹⁷+…×10³").
+              key: ValueKey('exponent_${index++}'),
               maxLines: 1,
               softWrap: false,
               style: style.copyWith(fontSize: fontSize * 0.5, height: 1),

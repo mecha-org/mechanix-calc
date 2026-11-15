@@ -78,9 +78,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    final res = ExpressionBuilder.handleDelete(_expressionNotifier.value);
+    final previous = _expressionNotifier.value;
+    final res = ExpressionBuilder.handleDelete(previous);
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
+
+    // Clear the result when the expression becomes empty to avoid showing the previous result.
+    if (previous.isNotEmpty && res.expression.isEmpty) {
+      context.read<CalculatorBloc>().add(const ClearPressed());
+    }
   }
 
   void _onToggleSignPressed() {

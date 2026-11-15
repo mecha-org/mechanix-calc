@@ -11,11 +11,39 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     on<ClearPressed>(_onClearPressed);
   }
 
-  static final _percentPattern = RegExp(r'(\d+(?:\.\d+)?)%');
+  static final _numberCharPattern = RegExp(r'[0-9.]');
   static final _leadingDecimalPattern = RegExp(r'(?<=[+\-*/])\.');
   static final _negativeNumberPattern = RegExp(
     r'(?<=[+\-*/])-(?:\d+(?:\.\d+)?|\.\d+)',
   );
+  static final _operandEndPattern = RegExp(r'[0-9.)%]');
+
+  /// Start index of the operand a `%` at [percentIndex] applies to: a number
+  /// ("10%") or a bracketed group ("(-5)%", "(-9.9*10^(17))%").
+  /// Returns -1 when there is no operand (e.g. "5+%").
+  static int _findPercentOperandStart(String expression, int percentIndex) {
+    var i = percentIndex - 1;
+    if (i < 0) return -1;
+
+    if (expression[i] == ')') {
+      var depth = 0;
+      for (; i >= 0; i--) {
+        if (expression[i] == ')') {
+          depth++;
+        } else if (expression[i] == '(') {
+          depth--;
+          if (depth == 0) return i;
+        }
+      }
+      return -1;
+    }
+
+    var start = percentIndex;
+    while (start > 0 && _numberCharPattern.hasMatch(expression[start - 1])) {
+      start--;
+    }
+    return start < percentIndex ? start : -1;
+  }
 
   /// Rewrites binary `+%` and `-%` as a percentage of the preceding
   /// operand within the same parenthesis group. Multiplication,
@@ -24,18 +52,19 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     var result = expression;
     var searchFrom = 0;
     while (true) {
-      final match = _percentPattern.allMatches(result, searchFrom).firstOrNull;
-      if (match == null) break;
+      final percentIndex = result.indexOf('%', searchFrom);
+      if (percentIndex == -1) break;
 
-      final opIndex = match.start - 1;
-      final op = opIndex >= 0 ? result[opIndex] : '';
+      final operandStart = _findPercentOperandStart(result, percentIndex);
+      final opIndex = operandStart - 1;
+      final op = operandStart > 0 ? result[opIndex] : '';
       final isBinaryAdditive =
           (op == '+' || op == '-') &&
           opIndex > 0 &&
-          RegExp(r'[0-9.)]').hasMatch(result[opIndex - 1]);
+          _operandEndPattern.hasMatch(result[opIndex - 1]);
 
       if (!isBinaryAdditive) {
-        searchFrom = match.end;
+        searchFrom = percentIndex + 1;
         continue;
       }
 
@@ -53,11 +82,53 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       }
       final base = result.substring(i + 1, opIndex);
 
-      final replacement = '(($base)*${match[1]}/100)';
-      result = result.replaceRange(match.start, match.end, replacement);
-      searchFrom = match.start + replacement.length;
+      // Insert the base's value rather than its text: copying the text
+      // makes chained percentages (1+1%+1%+…) grow exponentially.
+      final operand = result.substring(operandStart, percentIndex);
+      final replacement =
+          '(${_toLiteral(_evaluateConvertedExpression(base))}*$operand/100)';
+      result = result.replaceRange(operandStart, percentIndex + 1, replacement);
+      searchFrom = operandStart + replacement.length;
     }
     return result;
+  }
+
+  /// Evaluates an expression whose display symbols are already converted
+  /// (`*`, `/`, `^`, no commas) and whose `+%`/`-%` terms are resolved.
+  static double _evaluateConvertedExpression(String expression) {
+    // Remaining percentages divide their operand by 100:
+    // 200*50% -> 200*(50/100), (-5)% -> ((-5)/100).
+    var normalized = expression;
+    var percentIndex = normalized.indexOf('%');
+    while (percentIndex != -1) {
+      final operandStart = _findPercentOperandStart(normalized, percentIndex);
+      if (operandStart == -1) {
+        throw const FormatException('% without an operand');
+      }
+      final operand = normalized.substring(operandStart, percentIndex);
+      normalized = normalized.replaceRange(
+        operandStart,
+        percentIndex + 1,
+        '($operand/100)',
+      );
+      percentIndex = normalized.indexOf('%');
+    }
+    // E.g., -2*-2 -> -2*(-2), 5+-3 -> 5+(-3), 10/-2 -> 10/(-2), 5--3 -> 5-(-3)
+    normalized = normalized.replaceAllMapped(
+      _negativeNumberPattern,
+      (match) => '(${match.group(0)})',
+    );
+    final exp = GrammarParser().parse(normalized);
+    return exp.evaluate(EvaluationType.REAL, ContextModel()).toDouble();
+  }
+
+  /// A parseable, exact literal for [value] (the grammar has no `e`
+  /// notation, so 1e21 becomes `(1*10^(21))`).
+  static String _toLiteral(double value) {
+    final text = value.toString();
+    if (!text.contains('e')) return '($text)';
+    final parts = value.toStringAsExponential().split('e');
+    return '(${parts[0]}*10^(${int.parse(parts[1])}))';
   }
 
   void _onClearPressed(ClearPressed event, Emitter<CalculatorState> emit) {
@@ -91,23 +162,8 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       // matching common calculators: 200+10% -> 200+(200*10/100) = 220.
       finalExpression = resolvePercentageExpressions(finalExpression);
 
-      // Remaining percentages (e.g. 200*50%, 50%) are division by 100.
-      finalExpression = finalExpression.replaceAllMapped(
-        _percentPattern,
-        (match) => '(${match[1]}/100)',
-      );
-
-      // Wrap negative numbers that follow an operator in parentheses for evaluation.
-      // E.g., -2*-2 -> -2*(-2), 5+-3 -> 5+(-3), 10/-2 -> 10/(-2), 5--3 -> 5-(-3)
-      finalExpression = finalExpression.replaceAllMapped(
-        _negativeNumberPattern,
-        (match) => '(${match.group(0)})',
-      );
-
-      GrammarParser p = GrammarParser();
-      Expression exp = p.parse(finalExpression);
-      ContextModel cm = ContextModel();
-      double eval = exp.evaluate(EvaluationType.REAL, cm);
+      // Remaining percentages (200*50% -> 200*(50/100)), negative wrapping.
+      final eval = _evaluateConvertedExpression(finalExpression);
 
       // Handle Division by Zero or other invalid mathematical results
       if (eval.isInfinite || eval.isNaN) {

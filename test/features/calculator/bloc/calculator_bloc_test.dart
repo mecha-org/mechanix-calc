@@ -299,5 +299,59 @@ void main() {
         });
       });
     });
+
+    group('percentage precedence', () {
+      const cases = {
+        '200+10%×2': '240',
+        '200×50%+10%': '110',
+        '50%+10%': '0.55',
+        // % after a bracketed negative number.
+        '(-5)%': '-0.05',
+        '2×(-5)%': '-0.1',
+        '200+(-5)%': '190',
+        '200-(-5)%': '210',
+        '(-9.9×10¹⁷)%': '-9.9×10¹⁵',
+      };
+
+      cases.forEach((expression, expected) {
+        test('$expression = $expected', () async {
+          final expectation = expectLater(
+            calculatorBloc.stream,
+            emits(
+              isA<CalculatorState>().having(
+                (s) => s.result,
+                'result',
+                expected,
+              ),
+            ),
+          );
+          calculatorBloc.add(CalculateResult(expression));
+          await expectation;
+        });
+      });
+    });
+
+    test('chained percentages keep the evaluated expression short', () {
+      final expression = '1${'+1%' * 10}';
+      final resolved = CalculatorBloc.resolvePercentageExpressions(expression);
+      // Linear growth: each % adds a short literal, not a copy of the left side.
+      expect(resolved.length, lessThan(400));
+    });
+
+    test('1+1% ten times evaluates correctly', () async {
+      final expectation = expectLater(
+        calculatorBloc.stream,
+        emits(
+          isA<CalculatorState>().having(
+            (s) => s.result,
+            'result',
+            '1.1046221254112', // 1.01^10 to 15 significant digits
+          ),
+        ),
+      );
+      calculatorBloc.add(CalculateResult('1${'+1%' * 10}'));
+      await expectation;
+    });
+
   });
 }

@@ -381,6 +381,52 @@ void main() {
         expect(find.text('7').first, findsOneWidget);
       });
 
+      testWidgets(
+        'backspacing a reused scientific result to empty shows 0',
+        (tester) async {
+          await tester.pumpWidget(createScreen());
+
+          bloc.add(const CalculateResult('999999999×999999999'));
+          await tester.runAsync(() async {
+            for (var i = 0; i < 100 && bloc.state.history.isEmpty; i++) {
+              await Future<void>.delayed(const Duration(milliseconds: 10));
+            }
+          });
+          await tester.pumpAndSettle();
+          expect(bloc.state.result, '9.99999998×10¹⁷');
+
+          // 9.99999998×10¹⁷+9, then backspace one character at a time.
+          await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+          await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // 9
+          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // +
+          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // ⁷
+          await tester.pumpAndSettle();
+          expect(
+            find.textContaining('9.99999998×10', findRichText: true),
+            findsOneWidget,
+          );
+          // "9.99999998×10¹" has 14 characters left.
+          for (var i = 0; i < 14; i++) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+          }
+
+          await tester.runAsync(() async {
+            for (var i = 0; i < 100 && bloc.state.result != '0'; i++) {
+              await Future<void>.delayed(const Duration(milliseconds: 10));
+            }
+          });
+          await tester.pumpAndSettle();
+
+          expect(bloc.state.result, '0');
+          expect(bloc.state.history, isNotEmpty);
+          expect(
+            find.textContaining('9.99999998×10', findRichText: true),
+            findsNothing,
+          );
+        },
+      );
+
       testWidgets('Escape key clears calculation when history is closed', (
         tester,
       ) async {
