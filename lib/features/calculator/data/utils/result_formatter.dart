@@ -1,5 +1,6 @@
-/// Formats calculation results for display and converts displayed
-/// scientific notation back into an evaluable expression.
+/// Formats calculation results for display, using scientific notation
+/// with superscript exponents (9.99999998×10¹⁷) for very large or small
+/// values.
 class ResultFormatter {
   /// Results with an absolute value at or above this use scientific notation
   /// (16+ integer digits can't be represented exactly by a double).
@@ -101,11 +102,4 @@ class ResultFormatter {
       .split('')
       .map((c) => _superscriptDigits[c] ?? c)
       .join();
-
-  /// Rewrites `×10¹⁷` as `*10^(17)` so the expression can be parsed.
-  static String toEvaluable(String expression) =>
-      expression.replaceAllMapped(scientificSuffixPattern, (m) {
-        final exponent = m[1]!.split('').map((c) => _plainDigits[c]!).join();
-        return '*10^($exponent)';
-      });
 }

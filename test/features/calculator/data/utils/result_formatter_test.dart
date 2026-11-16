@@ -23,18 +23,4 @@ void main() {
       });
     });
   });
-
-  group('ResultFormatter.toEvaluable', () {
-    test('converts superscript exponents', () {
-      expect(
-        ResultFormatter.toEvaluable('9.99999998×10¹⁷+1'),
-        '9.99999998*10^(17)+1',
-      );
-      expect(ResultFormatter.toEvaluable('1.234×10⁻⁷'), '1.234*10^(-7)');
-    });
-
-    test('leaves normal multiplication alone', () {
-      expect(ResultFormatter.toEvaluable('5×10'), '5×10');
-    });
-  });
 }

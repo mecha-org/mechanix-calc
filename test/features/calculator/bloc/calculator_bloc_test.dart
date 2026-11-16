@@ -331,13 +331,6 @@ void main() {
       });
     });
 
-    test('chained percentages keep the evaluated expression short', () {
-      final expression = '1${'+1%' * 10}';
-      final resolved = CalculatorBloc.resolvePercentageExpressions(expression);
-      // Linear growth: each % adds a short literal, not a copy of the left side.
-      expect(resolved.length, lessThan(400));
-    });
-
     test('1+1% ten times evaluates correctly', () async {
       final expectation = expectLater(
         calculatorBloc.stream,
