@@ -8,6 +8,7 @@ class ExpressionReader {
   const ExpressionReader();
 
   static final _mantissa = RegExp(r'[0-9,]*(?:\.[0-9]*)?');
+  static final _digit = RegExp('[0-9]');
 
   /// Throws a [FormatException] for text that is not calculator input,
   /// e.g. `2(3)` (multiplication is always written out) or `abc`.
@@ -120,7 +121,7 @@ class ExpressionReader {
   static (NumberInput?, int) _readNumber(String text, int start) {
     final mantissa = _mantissa.matchAsPrefix(text, start)!;
     final digits = mantissa[0]!.replaceAll(',', '');
-    if (!digits.contains(RegExp('[0-9]'))) return (null, start);
+    if (!digits.contains(_digit)) return (null, start);
 
     final power = Superscript.typedPowerPattern.matchAsPrefix(
       text,

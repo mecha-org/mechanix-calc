@@ -5,7 +5,7 @@ import 'package:mechanix_calculator/features/calculator/domain/input/calc_serial
 import 'package:mechanix_calculator/features/calculator/domain/input/input_token.dart';
 
 /// Evaluates the calculator's input tokens:
-/// Parsing, the AST and evaluation come from `math_expressions`; t
+/// Parsing, the AST and evaluation come from `math_expressions`
 class CalcEngine {
   CalcEngine({
     CalcSerializer serializer = const CalcSerializer(),
