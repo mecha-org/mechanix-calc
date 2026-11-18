@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_bloc.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_event.dart';
 import 'package:mechanix_calculator/features/calculator/bloc/calculator_state.dart';
+import 'package:mechanix_calculator/features/calculator/domain/engine/calc_engine.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/input_token.dart';
 
 void main() {
   group('CalculatorBloc', () {
@@ -366,7 +370,11 @@ void main() {
               .having((s) => s.result, 'result', expected)
               .having((s) => s.errorMessage, 'errorMessage', '')
               .having((s) => s.history.first.expression, 'history', expression)
-              .having((s) => s.history.first.result, 'history result', expected),
+              .having(
+                (s) => s.history.first.result,
+                'history result',
+                expected,
+              ),
         ),
       );
       calculatorBloc.add(CalculateResult(expression));
@@ -502,8 +510,11 @@ void main() {
         calculatorBloc.stream,
         emitsInOrder([
           isA<CalculatorState>()
-              .having((s) => s.errorMessage, 'errorMessage',
-                  invalidOperationsErrorMessage)
+              .having(
+                (s) => s.errorMessage,
+                'errorMessage',
+                invalidOperationsErrorMessage,
+              )
               .having((s) => s.history, 'history', isEmpty),
           isA<CalculatorState>()
               .having((s) => s.errorMessage, 'errorMessage', '')
@@ -517,5 +528,48 @@ void main() {
         ..add(const CalculateResult('5²'));
       await expectation;
     });
+
+    group('unexpected errors', () {
+      test('show Error but are reported, not swallowed', () async {
+        final reported = <Object>[];
+        final states = <CalculatorState>[];
+        final done = Completer<void>();
+
+        runZonedGuarded(() {
+          final bloc = CalculatorBloc(engine: _FailingCalcEngine());
+          bloc.stream.listen(states.add);
+          bloc.add(const CalculateResult('5+3'));
+          Future<void>.delayed(
+            const Duration(milliseconds: 50),
+          ).then((_) => bloc.close()).whenComplete(done.complete);
+        }, (error, _) => reported.add(error));
+
+        await done.future;
+        expect(states.single.errorMessage, invalidOperationsErrorMessage);
+        expect(reported.single, isA<StateError>());
+      });
+
+      test('malformed input is an input error, not reported', () async {
+        final reported = <Object>[];
+        final done = Completer<void>();
+
+        runZonedGuarded(() {
+          final bloc = CalculatorBloc();
+          bloc.add(const CalculateResult('5++5'));
+          Future<void>.delayed(
+            const Duration(milliseconds: 50),
+          ).then((_) => bloc.close()).whenComplete(done.complete);
+        }, (error, _) => reported.add(error));
+
+        await done.future;
+        expect(reported, isEmpty);
+      });
+    });
   });
+}
+
+/// An engine with a bug: throws something that is not a FormatException.
+class _FailingCalcEngine extends CalcEngine {
+  @override
+  double evaluate(List<InputToken> tokens) => throw StateError('engine bug');
 }

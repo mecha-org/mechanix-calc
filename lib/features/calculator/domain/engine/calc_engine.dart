@@ -1,4 +1,5 @@
 import 'package:math_expressions/math_expressions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mechanix_calculator/features/calculator/domain/engine/calc_evaluator.dart';
 import 'package:mechanix_calculator/features/calculator/domain/engine/percent_resolver.dart';
 import 'package:mechanix_calculator/features/calculator/domain/input/calc_serializer.dart';
@@ -20,6 +21,7 @@ class CalcEngine {
   final GrammarParser _parser;
 
   /// Parses [tokens] into a percent-resolved AST.
+  @visibleForTesting
   ({Expression ast, ContextModel context}) parse(List<InputToken> tokens) {
     final serialized = _serializer.serialize(tokens);
     final ast = _percentResolver.resolve(_parser.parse(serialized.source));

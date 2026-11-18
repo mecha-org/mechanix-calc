@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mechanix_calculator/core/utils/app_logger.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/domain/engine/calc_engine.dart';
 import 'package:mechanix_calculator/features/calculator/domain/input/expression_reader.dart';
@@ -39,13 +40,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
 
       // NaN: undefined (e.g. division by zero); infinity: overflow.
       if (eval.isInfinite || eval.isNaN) {
-        emit(
-          state.copyWith(
-            expression: expressionToEvaluate,
-            result: '',
-            errorMessage: invalidOperationsErrorMessage,
-          ),
-        );
+        _emitInvalid(emit, expressionToEvaluate);
         return;
       }
 
@@ -67,16 +62,35 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
           errorMessage: '',
         ),
       );
+    } on FormatException {
+      // Malformed or unfinished input, e.g. "5++5", "5×" or "(-". The reader
+      // and the math_expressions parser (ParserException) both throw this.
+      _emitInvalid(emit, expressionToEvaluate);
     } catch (_) {
-      // Malformed expression (FormatException), e.g. "5++5" or "5×".
-      // Narrowed to typed errors in the CalcError refactor.
-      emit(
-        state.copyWith(
-          expression: expressionToEvaluate,
-          result: '',
-          errorMessage: invalidOperationsErrorMessage,
-        ),
-      );
+      // Anything else is a bug in the app or in math_expressions (e.g. a
+      // StackOverflowError, StateError or failed assertion).
+      _emitInvalid(emit, expressionToEvaluate);
+      rethrow;
     }
+  }
+
+  void _emitInvalid(Emitter<CalculatorState> emit, String expression) {
+    emit(
+      state.copyWith(
+        expression: expression,
+        result: '',
+        errorMessage: invalidOperationsErrorMessage,
+      ),
+    );
+  }
+
+  @override
+  void onError(Object error, StackTrace stackTrace) {
+    AppLogger.e(
+      'Unexpected error while evaluating',
+      error: error,
+      stack: stackTrace,
+    );
+    super.onError(error, stackTrace);
   }
 }
