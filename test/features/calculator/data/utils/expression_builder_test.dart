@@ -115,9 +115,9 @@ void main() {
     });
 
     group('Operator handling', () {
-      test('first pressed minus on empty expression sets negative sign', () {
+      test('minus on empty expression does nothing (use +/- for negatives)', () {
         final res = ExpressionBuilder.handleOperator('', '-');
-        expect(res.expression, '(-');
+        expect(res.expression, '');
         expect(res.errorMessage, '');
       });
 
@@ -142,6 +142,43 @@ void main() {
         expect(res.errorMessage, '');
       });
 
+      test('minus continues the previous result: 3+3=6 then - gives 6-', () {
+        final res = ExpressionBuilder.handleOperator(
+          '',
+          '-',
+          previousResult: '6',
+        );
+        expect(res.expression, '6-');
+        expect(res.errorMessage, '');
+      });
+
+      test('minus continues a negative previous result', () {
+        final res = ExpressionBuilder.handleOperator(
+          '',
+          '-',
+          previousResult: '-6',
+        );
+        expect(res.expression, '(-6)-');
+      });
+
+      test('minus continues a zero result: 3-3=0 then - gives 0-', () {
+        final res = ExpressionBuilder.handleOperator(
+          '',
+          '-',
+          previousResult: '0',
+        );
+        expect(res.expression, '0-');
+      });
+
+      test('minus with an empty (error) previous result does nothing', () {
+        final res = ExpressionBuilder.handleOperator(
+          '',
+          '-',
+          previousResult: '',
+        );
+        expect(res.expression, '');
+      });
+
       test(
         'operator on empty expression without previous result does nothing',
         () {
@@ -152,10 +189,10 @@ void main() {
         },
       );
 
-      test('minus on empty expression starts negative expression', () {
-        final res = ExpressionBuilder.handleOperator('', '-');
+      test('minus after × replaces it, like other operators', () {
+        final res = ExpressionBuilder.handleOperator('5×', '-');
 
-        expect(res.expression, '(-');
+        expect(res.expression, '5-');
       });
 
       test('operator after incomplete negative expression clears it', () {
@@ -297,10 +334,14 @@ void main() {
         },
       );
 
-      test('handleToggleSign on empty expression starts negative number', () {
-        final res = ExpressionBuilder.handleToggleSign('');
-
-        expect(res.expression, '(-');
+      test('handleToggleSign on empty expression keeps 0 (no "(-")', () {
+        expect(ExpressionBuilder.handleToggleSign('').expression, '');
+        expect(ExpressionBuilder.handleToggleSign('0').expression, '0');
+        // A 0 result is not negated: input continues from it as plain 0.
+        expect(
+          ExpressionBuilder.handleToggleSign('', previousResult: '0').expression,
+          '0',
+        );
       });
 
       test('handleToggleSign removes incomplete negative sign', () {

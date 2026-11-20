@@ -391,6 +391,6 @@ String _getErrorMessage(AppLocalizations? l10n, String key) {
 double getDisplayFontSize(String text) {
   if (text.length > 60) return 24;
   if (text.length > 40) return 32;
-  if (text.length > 16) return 40;
+  if (text.length > 15) return 40;
   return 52;
 }

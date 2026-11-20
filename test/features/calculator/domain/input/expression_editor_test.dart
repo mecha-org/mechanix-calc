@@ -114,19 +114,19 @@ void main() {
       '((-': '(',
     }, (tokens) => editor.appendOperator(tokens, CalcOperator.add));
 
-    table('-', {
-      '': '(-',
+    table('- is always subtraction (negatives come from +/-)', {
+      '': '',
       '5': '5-',
-      '(': '((-',
-      // replaces + and -
+      '(': '(',
+      '2×(': '2×(',
+      // replaces any operator, like + does
       '5+': '5-',
       '5-': '5-',
-      // after ×, ÷ and ^ it starts a negative operand
-      '5×': '5×(-',
-      '5÷': '5÷(-',
-      '5^': '5^(-',
-      '(2+3)^': '(2+3)^(-',
-      // a second - cancels the pending sign and replaces the operator
+      '5×': '5-',
+      '5÷': '5-',
+      '5^': '5-',
+      '(2+3)^': '(2+3)-',
+      // cancels a pending sign from +/-, then replaces the operator before it
       '(-': '',
       '5×(-': '5-',
     }, (tokens) => editor.appendOperator(tokens, CalcOperator.subtract));
@@ -177,13 +177,13 @@ void main() {
       expect(render(edit.tokens), '5+');
     });
 
-    test('minus on empty input starts a negative number, not the result', () {
+    test('minus on empty input continues the result like other operators', () {
       final edit = editor.appendOperator(
         const [],
         CalcOperator.subtract,
         previousResult: read('42'),
       );
-      expect(render(edit.tokens), '(-');
+      expect(render(edit.tokens), '42-');
     });
   });
 
@@ -294,7 +294,10 @@ void main() {
   });
 
   table('toggle sign', {
-    '': '(-',
+    // 0 stays 0: no "(-" on the empty display, no "-0"
+    '': '',
+    '0': '0',
+    '5+0': '5+0',
     '(-': '',
     '2×': '2×(-',
     '2×(-': '2×',
@@ -329,6 +332,7 @@ void main() {
       ('9.9×10¹⁷', '(-9.9)×10¹⁷'),
       ('-9.9×10¹⁷', '9.9×10¹⁷'),
       ('1.2×10⁻⁷', '(-1.2)×10⁻⁷'),
+      ('0', '0'),
     ]) {
       test('"$result" -> "$expected"', () {
         final edit = editor.negateResult(reader.readResult(result)!);

@@ -53,15 +53,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   void _onOperatorPressed(String operator) {
     if (_hasFatalError) {
       _errorMessageNotifier.value = '';
-      _expressionNotifier.value = operator == '-' ? '-' : '';
+      _expressionNotifier.value = '';
       context.read<CalculatorBloc>().add(const ClearPressed());
       return;
     }
-    final previousResult = context.read<CalculatorBloc>().state.result;
+    // Only a calculated result continues: the "0" shown at start or after
+    // AC is not one, so an operator there does nothing.
+    final state = context.read<CalculatorBloc>().state;
     final res = ExpressionBuilder.handleOperator(
       _expressionNotifier.value,
       operator,
-      previousResult: previousResult,
+      previousResult: state.expression.isEmpty ? null : state.result,
     );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;

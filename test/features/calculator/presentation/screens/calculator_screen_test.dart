@@ -233,7 +233,7 @@ void main() {
       expect(find.text(invalidOperationsErrorMessage), findsNothing);
     });
 
-    testWidgets('minus after fatal error starts negative expression', (
+    testWidgets('minus after fatal error clears it and starts empty', (
       tester,
     ) async {
       await tester.pumpWidget(createScreen());
@@ -247,7 +247,10 @@ void main() {
       await tester.tap(find.widgetWithText(MechanixButton, '-'));
       await tester.pumpAndSettle();
 
-      expect(find.text('-').first, findsOneWidget);
+      // Checked on screen, like 'toggle sign clears fatal error': the bloc
+      // lives outside the test's fake-async zone, so its state lags here.
+      expect(find.text(invalidOperationsErrorMessage), findsNothing);
+      expect(find.text('(-'), findsNothing);
     });
 
     group('Keyboard shortcuts and events', () {
@@ -510,7 +513,7 @@ void main() {
         expect(await resultAfterEnter(tester), '1,024');
       });
 
-      testWidgets('negative power with ^: 5^-2 = 5^(-2) = 0.04', (
+      testWidgets('negative power with ^ and +/-: 5^(-2) = 0.04', (
         tester,
       ) async {
         await tester.pumpWidget(createScreen());
@@ -521,7 +524,8 @@ void main() {
           LogicalKeyboardKey.shiftLeft,
           LogicalKeyboardKey.digit6,
         );
-        await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+        await tester.tap(find.widgetWithText(MechanixButton, '+/-'));
+        await tester.pumpAndSettle();
         await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
 
         expect(await resultAfterEnter(tester), '0.04');

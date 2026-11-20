@@ -66,37 +66,27 @@ class ExpressionEditor {
         ),
       };
 
-  /// [previousResult] continues the last calculation when the input is
-  /// empty: `42` then `+` gives `42+`.
+  /// `-` is always subtraction, like the other operators; negative numbers
+  /// come from +/- ([toggleSign]). With empty input, [previousResult]
+  /// continues the last calculation: `42` then `-` gives `42-`.
   EditResult appendOperator(
     List<InputToken> tokens,
     CalcOperator operator, {
     List<InputToken>? previousResult,
   }) {
     final next = OperatorInput(operator);
-    final startsNegative = operator == CalcOperator.subtract;
 
     return switch (tokens.lastOrNull) {
-      null when startsNegative => _append(tokens, [
-        const NumberInput.pendingSign(),
-      ]),
       null when previousResult?.isNotEmpty ?? false => _checked(tokens, [
         ...?previousResult,
         next,
       ]),
-      null => EditResult(tokens),
-      LeftParenthesisInput() when startsNegative => _append(tokens, [
-        const NumberInput.pendingSign(),
-      ]),
-      LeftParenthesisInput() => EditResult(tokens),
+      null || LeftParenthesisInput() => EditResult(tokens),
       NumberInput(isPendingSign: true) => EditResult(
         _withOperator(_withoutLast(tokens), next),
       ),
       NumberInput(power: '-') ||
       RightParenthesisInput(power: '-') => EditResult(tokens),
-      OperatorInput(operator: final previous)
-          when startsNegative && _takesNegativeOperand.contains(previous) =>
-        _append(tokens, [const NumberInput.pendingSign()]),
       OperatorInput() => _replaceLastChecked(tokens, next),
       NumberInput() ||
       RightParenthesisInput() ||
@@ -143,10 +133,12 @@ class ExpressionEditor {
   }
 
   EditResult toggleSign(List<InputToken> tokens) => switch (tokens.lastOrNull) {
-    null || OperatorInput() || LeftParenthesisInput() => _append(tokens, [
+    null => EditResult(tokens),
+    OperatorInput() || LeftParenthesisInput() => _append(tokens, [
       const NumberInput.pendingSign(),
     ]),
     NumberInput(isPendingSign: true) => EditResult(_withoutLast(tokens)),
+    final NumberInput number when _isPlainZero(number) => EditResult(tokens),
     final NumberInput number => _replaceLastChecked(
       tokens,
       number.copyWith(negative: !number.negative),
@@ -160,6 +152,9 @@ class ExpressionEditor {
   /// `8` -> `(-8)`, `9.9×10¹⁷` -> `(-9.9)×10¹⁷`.
   EditResult negateResult(List<InputToken> result) =>
       switch (result.firstOrNull) {
+        final NumberInput number when _isPlainZero(number) => EditResult(
+          result,
+        ),
         final NumberInput number => _checked(result, [
           number.copyWith(negative: !number.negative),
           ...result.skip(1),
@@ -286,13 +281,10 @@ class ExpressionEditor {
         _ => false,
       };
 
-  /// Operators after which `-` starts a negative operand instead of
-  /// replacing them: `5×-3`, `6÷-2`, `5^-2`.
-  static const _takesNegativeOperand = {
-    CalcOperator.multiply,
-    CalcOperator.divide,
-    CalcOperator.power,
-  };
+  /// A whole `0` with no power: +/- leaves it alone. `0.` is still being
+  /// typed (it may become `-0.5`), so its sign can be toggled.
+  static bool _isPlainZero(NumberInput number) =>
+      number.mantissa == '0' && !number.negative && !number.hasPower;
 
   /// `17` -> `1`, `-7` -> `` (a lone minus is not a power).
   static String _dropLastPowerChar(String power) {
@@ -303,5 +295,7 @@ class ExpressionEditor {
   static List<InputToken> _withoutLast(List<InputToken> tokens) =>
       tokens.isEmpty ? tokens : tokens.sublist(0, tokens.length - 1);
 
-  static bool _isDigit(String text) => RegExp(r'^[0-9]$').hasMatch(text);
+  static final _digit = RegExp(r'^[0-9]$');
+
+  static bool _isDigit(String text) => _digit.hasMatch(text);
 }
