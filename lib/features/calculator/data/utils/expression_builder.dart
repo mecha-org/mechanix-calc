@@ -4,6 +4,8 @@ import 'package:mechanix_calculator/features/calculator/domain/input/calc_operat
 import 'package:mechanix_calculator/features/calculator/domain/input/expression_editor.dart';
 import 'package:mechanix_calculator/features/calculator/domain/input/expression_reader.dart';
 import 'package:mechanix_calculator/features/calculator/domain/input/input_token.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/pasted_text.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/text_typer.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/formatting/expression_renderer.dart';
 
 class ExpressionResult extends Equatable {
@@ -23,6 +25,7 @@ abstract final class ExpressionBuilder {
   static const _reader = ExpressionReader();
   static const _renderer = ExpressionRenderer();
   static const _editor = ExpressionEditor(renderer: _renderer);
+  static const _typer = TextTyper(_editor);
 
   static ExpressionResult handleNumber(
     String currentExpression,
@@ -96,6 +99,27 @@ abstract final class ExpressionBuilder {
 
   static ExpressionResult handlePercentage(String currentExpression) =>
       _edit(currentExpression, _editor.appendPercent);
+
+  /// Handles pasted text by typing it key by key using keypad rules, preserving input validation and limits.
+  static ExpressionResult handlePaste(String currentExpression, String pasted) {
+    final text = PastedText.normalize(pasted);
+    if (text.isEmpty) return ExpressionResult(expression: currentExpression);
+
+    final List<InputToken> tokens;
+    try {
+      tokens = _reader.read(currentExpression);
+    } on FormatException {
+      return ExpressionResult(expression: currentExpression);
+    }
+    try {
+      return _render(_typer.type(tokens, text), currentExpression);
+    } on FormatException {
+      return ExpressionResult(
+        expression: currentExpression,
+        errorMessage: invalidPasteErrorMessage,
+      );
+    }
+  }
 
   /// The expression to evaluate on `=`: open brackets are closed.
   static String closeBrackets(String currentExpression) {

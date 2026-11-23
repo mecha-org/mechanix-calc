@@ -572,5 +572,110 @@ void main() {
         );
       });
     });
+  
+    group('Paste', () {
+      test('pastes into empty input as typed', () {
+        expect(ExpressionBuilder.handlePaste('', '12+3').expression, '12+3');
+        expect(ExpressionBuilder.handlePaste('', '-5').expression, '(-5)');
+        expect(ExpressionBuilder.handlePaste('', '9.9×10¹⁷').expression,
+            '9.9×10¹⁷');
+      });
+
+      test('appends at the end of the input', () {
+        expect(ExpressionBuilder.handlePaste('5+', '3').expression, '5+3');
+        expect(ExpressionBuilder.handlePaste('5', '3').expression, '53');
+        expect(ExpressionBuilder.handlePaste('5', '-3').expression, '5-3');
+        expect(ExpressionBuilder.handlePaste('5×', '-3').expression,
+            '5×(-3)');
+        expect(ExpressionBuilder.handlePaste('(-', '5').expression, '(-5)');
+      });
+
+      test('accepts common spellings: *, /, x, spaces, separators, =', () {
+        expect(ExpressionBuilder.handlePaste('', '2 * 3').expression, '2×3');
+        expect(ExpressionBuilder.handlePaste('', '8/2').expression, '8÷2');
+        expect(ExpressionBuilder.handlePaste('', '2 x 3 =').expression, '2×3');
+        expect(ExpressionBuilder.handlePaste('', '1,024').expression, '1024');
+        expect(ExpressionBuilder.handlePaste('', '− 5').expression, '(-5)');
+        expect(ExpressionBuilder.handlePaste('', '.5').expression, '0.5');
+      });
+
+      test('a copied result pastes back to the same value', () {
+        for (final result in ['1,024', '-42', '9.9×10¹⁷', '1.2×10⁻⁷']) {
+          final pasted = ExpressionBuilder.handlePaste('', result);
+          expect(pasted.errorMessage, '', reason: result);
+        }
+      });
+
+      test('follows the typing rules where the input and the paste meet', () {
+        for (final (input, pasted, expected) in [
+          ('5%', '8', '5%×8'),
+          ('(2+3)', '4', '(2+3)×4'),
+          ('(-5)', '3', '(-53)'),
+          ('7', '2(3)', '72×(3)'),
+          ('5', '×3', '5×3'),
+          ('5+', '×3', '5×3'),
+          ('5²', '3', '5²'),
+          ('7', ')', '7'),
+          ('2^', '-3', '2^(-3)'),
+          ('', '(-5+3)', '((-5)+3)'),
+        ]) {
+          final res = ExpressionBuilder.handlePaste(input, pasted);
+          expect(res.expression, expected, reason: '$input + $pasted');
+          expect(res.errorMessage, '', reason: '$input + $pasted');
+        }
+      });
+
+      test('paste gives the same input as typing the same keys', () {
+        // Typing, key by key, through the other handlers.
+        String typed(String input, List<String> keys) {
+          var expression = input;
+          for (final key in keys) {
+            expression = switch (key) {
+              '%' => ExpressionBuilder.handlePercentage(expression),
+              '(' => ExpressionBuilder.handleOpenBracket(expression),
+              ')' => ExpressionBuilder.handleCloseBracket(expression),
+              '+' || '-' || '×' || '÷' || '^' =>
+                ExpressionBuilder.handleOperator(expression, key),
+              _ => ExpressionBuilder.handleNumber(expression, key),
+            }.expression;
+          }
+          return expression;
+        }
+
+        for (final (input, keys) in [
+          ('5%', ['8']),
+          ('(2+3)', ['4']),
+          ('(-5)', ['3']),
+          ('12', ['+', '3', '%', '(', '4']),
+          ('', ['1', '.', '5', '×', '2']),
+        ]) {
+          expect(
+            ExpressionBuilder.handlePaste(input, keys.join()).expression,
+            typed(input, keys),
+            reason: '$input + ${keys.join()}',
+          );
+        }
+      });
+
+      test('text with a character no key types leaves the input unchanged', () {
+        for (final text in ['abc', '5\$', '2+y']) {
+          final res = ExpressionBuilder.handlePaste('7', text);
+          expect(res.expression, '7', reason: text);
+          expect(res.errorMessage, invalidPasteErrorMessage, reason: text);
+        }
+      });
+
+      test('input limits apply as when typing', () {
+        final res = ExpressionBuilder.handlePaste('', '1' * 16);
+        expect(res.expression, '');
+        expect(res.errorMessage, maxDigitsErrorMessage);
+      });
+
+      test('blank clipboard text changes nothing', () {
+        final res = ExpressionBuilder.handlePaste('5', '  ');
+        expect(res.expression, '5');
+        expect(res.errorMessage, '');
+      });
+    });
   });
 }

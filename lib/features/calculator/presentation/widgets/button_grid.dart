@@ -15,6 +15,11 @@ enum CalculatorActionType {
   toggleSign,
   percentage,
   calculate,
+
+  /// Clipboard (keyboard: Ctrl+C, Ctrl+V; long-press or right-click on the
+  /// display): copy the main line, paste as typed.
+  copy,
+  paste,
 }
 
 class CalculatorButtonData {

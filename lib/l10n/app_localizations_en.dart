@@ -24,4 +24,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get invalidOperationsErrorMessage => 'Error';
+
+  @override
+  String get invalidPasteErrorMessage =>
+      'Can\'t paste: not a number or expression';
 }

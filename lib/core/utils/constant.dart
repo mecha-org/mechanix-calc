@@ -151,7 +151,8 @@ final Map<LogicalKeyboardKey, CalculatorButtonData> shiftedKeyboardKeyMap = {
 
 /// Keys pressed with Ctrl: digits type a superscript power (`5` then Ctrl+2
 /// gives `5²`) and `-` starts a negative one (`5⁻²`), as in GNOME
-/// Calculator. Other Ctrl combinations are ignored.
+/// Calculator; C and V copy and paste. Other Ctrl combinations are
+/// ignored.
 final Map<LogicalKeyboardKey, CalculatorButtonData> controlKeyboardKeyMap = {
   for (var digit = 0; digit <= 9; digit++) ...{
     _digitRowKeys[digit]: _superscript('$digit'),
@@ -159,6 +160,12 @@ final Map<LogicalKeyboardKey, CalculatorButtonData> controlKeyboardKeyMap = {
   },
   LogicalKeyboardKey.minus: _superscript('-'),
   LogicalKeyboardKey.numpadSubtract: _superscript('-'),
+  LogicalKeyboardKey.keyC: const CalculatorButtonData(
+    action: CalculatorActionType.copy,
+  ),
+  LogicalKeyboardKey.keyV: const CalculatorButtonData(
+    action: CalculatorActionType.paste,
+  ),
 };
 
 /// The button a key press means, or null for keys the calculator ignores.
@@ -184,3 +191,5 @@ const String maxCharactersErrorMessage = "Can't enter more than 100 characters";
 const String maxOperationsErrorMessage = "Can't enter more than 20 operations";
 
 const String invalidOperationsErrorMessage = "Error";
+const String invalidPasteErrorMessage =
+    "Can't paste: not a number or expression";

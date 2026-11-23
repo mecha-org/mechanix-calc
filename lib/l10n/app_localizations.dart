@@ -123,6 +123,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get invalidOperationsErrorMessage;
+
+  /// Error message when the pasted clipboard text is not calculator input
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t paste: not a number or expression'**
+  String get invalidPasteErrorMessage;
 }
 
 class _AppLocalizationsDelegate

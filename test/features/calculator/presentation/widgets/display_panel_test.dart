@@ -677,4 +677,62 @@ void main() {
       });
     });
   });
+
+  group('displayLines', () {
+    test('typing: the input is the main line, no top line', () {
+      final lines = displayLines(
+        expression: '12+3',
+        calculatedExpression: '5+3',
+        result: '8',
+        errorMessage: '',
+      );
+      expect(lines.main, '12+3');
+      expect(lines.top, '');
+      expect(lines.showsError, isFalse);
+    });
+
+    test('after =: the result is the main line, the expression on top', () {
+      final lines = displayLines(
+        expression: '',
+        calculatedExpression: '5+3',
+        result: '8',
+        errorMessage: '',
+      );
+      expect(lines.main, '8');
+      expect(lines.top, '5+3');
+    });
+
+    test('start screen and after AC: 0', () {
+      final lines = displayLines(
+        expression: '',
+        calculatedExpression: '',
+        result: '',
+        errorMessage: '',
+      );
+      expect(lines.main, '0');
+      expect(lines.top, '');
+    });
+
+    test('Error: shown on the main line, expression on top', () {
+      final lines = displayLines(
+        expression: '',
+        calculatedExpression: '5÷0',
+        result: '',
+        errorMessage: invalidOperationsErrorMessage,
+      );
+      expect(lines.showsError, isTrue);
+      expect(lines.top, '5÷0');
+    });
+
+    test('a limit message does not replace the main line', () {
+      final lines = displayLines(
+        expression: '123',
+        calculatedExpression: '',
+        result: '0',
+        errorMessage: maxDigitsErrorMessage,
+      );
+      expect(lines.main, '123');
+      expect(lines.showsError, isFalse);
+    });
+  });
 }

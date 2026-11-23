@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/data/utils/expression_builder.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/copied_text.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/button_grid.dart';
+import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_context_menu.dart';
 import 'package:widgets/widgets.dart';
 import '../../bloc/calculator_bloc.dart';
 import '../../bloc/calculator_event.dart';
@@ -153,7 +155,55 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
   }
 
+  /// What the main line shows, decided by [displayLines] from the same
+  /// values [_DisplayPanelSection] gives the display.
+  ({String top, String main, bool showsError}) get _displayLines {
+    final state = context.read<CalculatorBloc>().state;
+    final errorMessage = _errorMessageNotifier.value;
+    return displayLines(
+      expression: _expressionNotifier.value,
+      calculatedExpression: state.expression,
+      result: state.result,
+      errorMessage: _shownError(errorMessage, state.errorMessage),
+    );
+  }
+
+  /// Copies the main line as plain ASCII (`8888×979999` -> `8888*979999`,
+  /// `9.9×10¹⁷` -> `9.9*10^17`), so every app can paste it; nothing while an
+  /// error is shown.
+  Future<void> _onCopyPressed() async {
+    final lines = _displayLines;
+    if (lines.showsError) return;
+    await Clipboard.setData(
+      ClipboardData(text: CopiedText.fromDisplay(lines.main)),
+    );
+  }
+
+  /// Adds the clipboard text at the end of the input, as if typed. After an
+  /// error it starts from empty input, like any other key.
+  Future<void> _onPastePressed() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!mounted || text == null || text.trim().isEmpty) return;
+    if (_hasFatalError) _onClearPressed();
+    _apply(ExpressionBuilder.handlePaste(_expressionNotifier.value, text));
+  }
+
+  /// Context menu items for the display: Copy unless an error is shown,
+  /// Paste always.
+  List<ContextMenuButtonItem> _contextMenuItems() => [
+    if (!_displayLines.showsError)
+      ContextMenuButtonItem(
+        type: ContextMenuButtonType.copy,
+        onPressed: _onCopyPressed,
+      ),
+    ContextMenuButtonItem(
+      type: ContextMenuButtonType.paste,
+      onPressed: _onPastePressed,
+    ),
+  ];
+
   void _handleButtonAction(CalculatorButtonData button) {
+    DisplayContextMenu.hide();
     switch (button.action) {
       case CalculatorActionType.number:
         _onNumberPressed(button.value ?? button.text ?? '');
@@ -175,6 +225,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         _onPercentagePressed();
       case CalculatorActionType.calculate:
         _onCalculateResult();
+      case CalculatorActionType.copy:
+        _onCopyPressed();
+      case CalculatorActionType.paste:
+        _onPastePressed();
     }
   }
 
@@ -242,6 +296,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         expressionNotifier: _expressionNotifier,
                         errorMessageNotifier: _errorMessageNotifier,
                         isHistoryOpenNotifier: _isHistoryOpenNotifier,
+                        contextMenuItems: _contextMenuItems,
                       ),
                     ),
                     Expanded(
@@ -271,15 +326,22 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 }
 
+/// The error the display shows: one set by the input (a limit, an invalid
+/// paste), else the calculator's (e.g. "Error" for 5÷0).
+String _shownError(String inputError, String calculatorError) =>
+    inputError.isNotEmpty ? inputError : calculatorError;
+
 class _DisplayPanelSection extends StatelessWidget {
   final ValueNotifier<String> expressionNotifier;
   final ValueNotifier<String> errorMessageNotifier;
   final ValueNotifier<bool> isHistoryOpenNotifier;
+  final List<ContextMenuButtonItem> Function() contextMenuItems;
 
   const _DisplayPanelSection({
     required this.expressionNotifier,
     required this.errorMessageNotifier,
     required this.isHistoryOpenNotifier,
+    required this.contextMenuItems,
   });
 
   @override
@@ -311,11 +373,13 @@ class _DisplayPanelSection extends StatelessWidget {
                   expression: expression,
                   calculatedExpression: state.expression,
                   result: state.result,
-                  errorMessage: errorMessage.isNotEmpty
-                      ? errorMessage
-                      : state.errorMessage,
+                  errorMessage: _shownError(
+                    errorMessage,
+                    state.errorMessage,
+                  ),
                   history: state.history,
                   isHistoryOpen: false,
+                  contextMenuItems: contextMenuItems,
                   onDismissHistory: () {
                     isHistoryOpenNotifier.value = false;
                   },

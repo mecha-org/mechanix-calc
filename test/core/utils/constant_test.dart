@@ -156,10 +156,35 @@ void main() {
       }
     });
 
-    test('other Ctrl combinations are ignored', () {
+    test('Ctrl+C and Ctrl+V copy and paste', () {
+      expectButton(
+        LogicalKeyboardKey.keyC,
+        CalculatorActionType.copy,
+        null,
+        false,
+        true,
+      );
+      expectButton(
+        LogicalKeyboardKey.keyV,
+        CalculatorActionType.paste,
+        null,
+        false,
+        true,
+      );
+      // Without Ctrl they are ordinary, ignored letters.
       for (final key in [
         LogicalKeyboardKey.keyC,
         LogicalKeyboardKey.keyV,
+      ]) {
+        expect(buttonForKey(key), isNull, reason: key.debugName);
+      }
+    });
+
+    test('other Ctrl combinations are ignored', () {
+      for (final key in [
+        LogicalKeyboardKey.keyA,
+        LogicalKeyboardKey.keyX,
+        LogicalKeyboardKey.keyZ,
         LogicalKeyboardKey.equal,
         LogicalKeyboardKey.add,
         LogicalKeyboardKey.enter,
