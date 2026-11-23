@@ -52,6 +52,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _errorMessageNotifier.value = res.errorMessage;
   }
 
+  /// The result an operator, `%` or +/- continues on empty input. Null
+  /// before any calculation and after AC (no calculated expression yet), so
+  /// the "0" shown there is not continued.
+  String? get _previousResult {
+    final state = context.read<CalculatorBloc>().state;
+    return state.expression.isEmpty ? null : state.result;
+  }
+
   void _onOperatorPressed(String operator) {
     if (_hasFatalError) {
       _errorMessageNotifier.value = '';
@@ -59,13 +67,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       context.read<CalculatorBloc>().add(const ClearPressed());
       return;
     }
-    // Only a calculated result continues: the "0" shown at start or after
-    // AC is not one, so an operator there does nothing.
-    final state = context.read<CalculatorBloc>().state;
     final res = ExpressionBuilder.handleOperator(
       _expressionNotifier.value,
       operator,
-      previousResult: state.expression.isEmpty ? null : state.result,
+      previousResult: _previousResult,
     );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
@@ -98,10 +103,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    final previousResult = context.read<CalculatorBloc>().state.result;
     final res = ExpressionBuilder.handleToggleSign(
       _expressionNotifier.value,
-      previousResult: previousResult == '0' ? null : previousResult,
+      previousResult: _previousResult,
     );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
@@ -142,7 +146,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    final res = ExpressionBuilder.handlePercentage(_expressionNotifier.value);
+    final res = ExpressionBuilder.handlePercentage(
+      _expressionNotifier.value,
+      previousResult: _previousResult,
+    );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
   }

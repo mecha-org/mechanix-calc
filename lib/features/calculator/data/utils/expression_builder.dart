@@ -46,6 +46,8 @@ abstract final class ExpressionBuilder {
     (tokens) => _editor.appendSuperscript(tokens, char),
   );
 
+  /// With empty input the operator continues [previousResult]: `42` then
+  /// `+` gives `42+`.
   static ExpressionResult handleOperator(
     String currentExpression,
     String operator, {
@@ -55,16 +57,10 @@ abstract final class ExpressionBuilder {
     if (calcOperator == null) {
       return ExpressionResult(expression: currentExpression);
     }
-    final previous = previousResult == null
-        ? null
-        : _reader.readResult(previousResult);
-    return _edit(
+    return _editContinuing(
       currentExpression,
-      (tokens) => _editor.appendOperator(
-        tokens,
-        calcOperator,
-        previousResult: previous,
-      ),
+      previousResult,
+      (tokens) => _editor.appendOperator(tokens, calcOperator),
     );
   }
 
@@ -82,23 +78,25 @@ abstract final class ExpressionBuilder {
   static ExpressionResult handleClear() =>
       const ExpressionResult(expression: '');
 
-  /// With empty input, +/- negates [previousResult]: `8` -> `(-8)`,
-  /// `-9.9×10¹⁷` -> `9.9×10¹⁷`.
+  /// With empty input, +/- negates [previousResult] as a whole:
+  /// `8` -> `(-8)`, `-9.9×10¹⁷` -> `9.9×10¹⁷`.
   static ExpressionResult handleToggleSign(
     String currentExpression, {
     String? previousResult,
-  }) {
-    if (currentExpression.isEmpty && previousResult != null) {
-      final result = _reader.readResult(previousResult);
-      if (result != null) {
-        return _render(_editor.negateResult(result), currentExpression);
-      }
-    }
-    return _edit(currentExpression, _editor.toggleSign);
-  }
+  }) => _editContinuing(
+    currentExpression,
+    previousResult,
+    _editor.toggleSign,
+    onResult: _editor.negateResult,
+  );
 
-  static ExpressionResult handlePercentage(String currentExpression) =>
-      _edit(currentExpression, _editor.appendPercent);
+  /// With empty input, `%` continues [previousResult]: `8` then `%` gives
+  /// `8%`.
+  static ExpressionResult handlePercentage(
+    String currentExpression, {
+    String? previousResult,
+  }) =>
+      _editContinuing(currentExpression, previousResult, _editor.appendPercent);
 
   /// Handles pasted text by typing it key by key using keypad rules, preserving input validation and limits.
   static ExpressionResult handlePaste(String currentExpression, String pasted) {
@@ -131,6 +129,29 @@ abstract final class ExpressionBuilder {
       return currentExpression;
     }
   }
+
+  /// Applies [key] to the previous result when input is empty.
+  /// Uses [onResult] for result-specific behavior.
+  static ExpressionResult _editContinuing(
+    String currentExpression,
+    String? previousResult,
+    EditResult Function(List<InputToken>) key, {
+    EditResult Function(List<InputToken>)? onResult,
+  }) {
+    final result = _readResult(previousResult);
+    if (currentExpression.isEmpty && result != null) {
+      return _render(
+        _editor.continueResult(result, onResult ?? key),
+        currentExpression,
+      );
+    }
+    return _edit(currentExpression, key);
+  }
+
+  /// A calculated result as input tokens, or null for none (or not a
+  /// finished value).
+  static List<InputToken>? _readResult(String? text) =>
+      text == null ? null : _reader.readResult(text);
 
   static ExpressionResult _edit(
     String expression,

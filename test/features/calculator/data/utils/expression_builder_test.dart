@@ -132,6 +132,45 @@ void main() {
         expect(res.expression, '9÷');
       });
 
+      test('percent continues the previous result: 8 then % gives 8%', () {
+        expect(
+          ExpressionBuilder.handlePercentage('', previousResult: '8').expression,
+          '8%',
+        );
+        expect(
+          ExpressionBuilder.handlePercentage('', previousResult: '-8')
+              .expression,
+          '(-8)%',
+        );
+      });
+
+      test('a previous result is ignored when there is input', () {
+        expect(
+          ExpressionBuilder.handleOperator('5', '+', previousResult: '42')
+              .expression,
+          '5+',
+        );
+        expect(
+          ExpressionBuilder.handlePercentage('5', previousResult: '42')
+              .expression,
+          '5%',
+        );
+        expect(
+          ExpressionBuilder.handleToggleSign('5', previousResult: '42')
+              .expression,
+          '(-5)',
+        );
+      });
+
+      test('percent with no previous result does nothing', () {
+        expect(ExpressionBuilder.handlePercentage('').expression, '');
+        expect(
+          ExpressionBuilder.handlePercentage('', previousResult: '')
+              .expression,
+          '',
+        );
+      });
+
       test('appends operator to previous result when expression is empty', () {
         final res = ExpressionBuilder.handleOperator(
           '',
@@ -337,10 +376,10 @@ void main() {
       test('handleToggleSign on empty expression keeps 0 (no "(-")', () {
         expect(ExpressionBuilder.handleToggleSign('').expression, '');
         expect(ExpressionBuilder.handleToggleSign('0').expression, '0');
-        // A 0 result is not negated: input continues from it as plain 0.
+        // +/- does nothing to a 0 result (no "-0"): the input stays empty.
         expect(
           ExpressionBuilder.handleToggleSign('', previousResult: '0').expression,
-          '0',
+          '',
         );
       });
 
@@ -510,10 +549,17 @@ void main() {
         expect(ExpressionBuilder.handleDelete('1.2×10⁻⁷').expression, '1.2×10');
       });
 
-      test('% cannot follow a power', () {
+      test('% follows a power, as in GNOME Calculator', () {
         expect(
           ExpressionBuilder.handlePercentage('9.9×10¹⁷').expression,
-          '9.9×10¹⁷',
+          '9.9×10¹⁷%',
+        );
+        expect(
+          ExpressionBuilder.handlePercentage(
+            '',
+            previousResult: '8.888989991×10¹⁴',
+          ).expression,
+          '8.888989991×10¹⁴%',
         );
       });
 

@@ -146,6 +146,12 @@ void main() {
       expectValue('9.99999998×10¹⁷+1', 9.99999998e17 + 1);
       expectValue('(-9.9×10¹⁷)÷2', -4.95e17);
       expectValue('(-9.9×10¹⁷)%', -9.9e15);
+      // % after a power takes the powered value, as in GNOME Calculator.
+      expectValue('9.9×10¹⁷%', 9.9e15);
+      expectValue('8.888989991×10¹⁴%', 8.888989991e12);
+      expectValue('5²%', 0.25);
+      expectValue('(2+3)²%', 0.25);
+      expectValue('200+5²%', 250); // 200 + 25% of 200
       expectValue('1.2×10⁻⁷×2', 2.4e-7);
       expectValue('1×10¹⁵-1', 999999999999999);
       // After backspacing the exponent away it is a plain multiplication.

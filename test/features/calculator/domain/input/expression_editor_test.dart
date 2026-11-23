@@ -150,41 +150,6 @@ void main() {
       '9×': '9÷',
       '9-': '9÷',
     }, (tokens) => editor.appendOperator(tokens, CalcOperator.divide));
-
-    test('continues the previous result when the input is empty', () {
-      for (final (result, expected) in [
-        ('42', '42+'),
-        ('-42', '(-42)+'),
-        ('9.99999998×10¹⁷', '9.99999998×10¹⁷+'),
-        ('-1.2×10⁻⁷', '(-1.2)×10⁻⁷+'),
-        ('0', '0+'),
-      ]) {
-        final edit = editor.appendOperator(
-          const [],
-          CalcOperator.add,
-          previousResult: reader.readResult(result),
-        );
-        expect(render(edit.tokens), expected, reason: result);
-      }
-    });
-
-    test('previous result is ignored when input is not empty', () {
-      final edit = editor.appendOperator(
-        read('5'),
-        CalcOperator.add,
-        previousResult: read('42'),
-      );
-      expect(render(edit.tokens), '5+');
-    });
-
-    test('minus on empty input continues the result like other operators', () {
-      final edit = editor.appendOperator(
-        const [],
-        CalcOperator.subtract,
-        previousResult: read('42'),
-      );
-      expect(render(edit.tokens), '42-');
-    });
   });
 
   table('open bracket', {
@@ -341,6 +306,56 @@ void main() {
     }
   });
 
+  group('continue a previous result (a key on empty input)', () {
+    EditResult continueWith(
+      String result,
+      EditResult Function(List<InputToken>) key,
+    ) => editor.continueResult(reader.readResult(result)!, key);
+
+    test('an operator appends to the result', () {
+      for (final (result, expected) in [
+        ('42', '42+'),
+        ('-42', '(-42)+'),
+        ('9.99999998×10¹⁷', '9.99999998×10¹⁷+'),
+        ('-1.2×10⁻⁷', '(-1.2)×10⁻⁷+'),
+        ('0', '0+'),
+      ]) {
+        final edit = continueWith(
+          result,
+          (t) => editor.appendOperator(t, CalcOperator.add),
+        );
+        expect(render(edit.tokens), expected, reason: result);
+      }
+      final minus = continueWith(
+        '42',
+        (t) => editor.appendOperator(t, CalcOperator.subtract),
+      );
+      expect(render(minus.tokens), '42-');
+    });
+
+    test('% follows the typing rule on the result', () {
+      for (final (result, expected) in [
+        ('8', '8%'),
+        ('-8', '(-8)%'),
+        ('1,234.5', '1234.5%'),
+        ('9.9×10¹⁷', '9.9×10¹⁷%'),
+      ]) {
+        final edit = continueWith(result, editor.appendPercent);
+        expect(render(edit.tokens), expected, reason: result);
+      }
+    });
+
+    test('+/- negates the whole result; 0 stays (input empty)', () {
+      expect(render(continueWith('8', editor.negateResult).tokens), '(-8)');
+      expect(render(continueWith('0', editor.negateResult).tokens), '');
+    });
+
+    test('a key that does nothing to the result leaves the input empty', () {
+      // ")" with nothing open does nothing, so the result is not taken.
+      expect(render(continueWith('5', editor.appendCloseBracket).tokens), '');
+    });
+  });
+
   table('percent', {
     '': '',
     '50': '50%',
@@ -348,10 +363,13 @@ void main() {
     '(-5)': '(-5)%',
     '50%': '50%%',
     '(2+3)': '(2+3)%',
-    // not straight after a superscript power
-    '5²': '5²',
-    '9.9×10¹⁷': '9.9×10¹⁷',
-    '(2+3)²': '(2+3)²',
+    // after a power too, as in GNOME Calculator
+    '5²': '5²%',
+    '9.9×10¹⁷': '9.9×10¹⁷%',
+    '(2+3)²': '(2+3)²%',
+    // not while the power is unfinished
+    '5⁻': '5⁻',
+    '(2+3)⁻': '(2+3)⁻',
     // no value to apply to
     '5+': '5+',
     '(': '(',
@@ -562,8 +580,12 @@ void main() {
         digit: (t) => editor.appendDigit(t, digit),
       '.': editor.appendDecimalPoint,
       for (final operator in CalcOperator.values)
-        operator.displaySymbol: (t) =>
-            editor.appendOperator(t, operator, previousResult: previousResult),
+        operator.displaySymbol: (t) => t.isEmpty
+            ? editor.continueResult(
+                previousResult!,
+                (r) => editor.appendOperator(r, operator),
+              )
+            : editor.appendOperator(t, operator),
       '(': editor.appendOpenBracket,
       ')': editor.appendCloseBracket,
       for (final char in ['0', '2', '7', '-'])

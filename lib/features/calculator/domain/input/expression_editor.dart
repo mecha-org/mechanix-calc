@@ -67,20 +67,12 @@ class ExpressionEditor {
       };
 
   /// `-` is always subtraction, like the other operators; negative numbers
-  /// come from +/- ([toggleSign]). With empty input, [previousResult]
-  /// continues the last calculation: `42` then `-` gives `42-`.
-  EditResult appendOperator(
-    List<InputToken> tokens,
-    CalcOperator operator, {
-    List<InputToken>? previousResult,
-  }) {
+  /// come from +/- ([toggleSign]). On empty input the previous result is
+  /// continued by [continueResult], not here.
+  EditResult appendOperator(List<InputToken> tokens, CalcOperator operator) {
     final next = OperatorInput(operator);
 
     return switch (tokens.lastOrNull) {
-      null when previousResult?.isNotEmpty ?? false => _checked(tokens, [
-        ...?previousResult,
-        next,
-      ]),
       null || LeftParenthesisInput() => EditResult(tokens),
       NumberInput(isPendingSign: true) => EditResult(
         _withOperator(_withoutLast(tokens), next),
@@ -92,6 +84,17 @@ class ExpressionEditor {
       RightParenthesisInput() ||
       PercentInput() => _append(tokens, [next]),
     };
+  }
+
+  /// Applies a key to the previous result when input is empty.
+  /// Unchanged results keep input empty; errors are preserved.
+  EditResult continueResult(
+    List<InputToken> result,
+    EditResult Function(List<InputToken>) key,
+  ) {
+    final edit = key(result);
+    if (edit.error != null) return EditResult(const [], edit.error);
+    return _tokensMatch(edit.tokens, result) ? const EditResult([]) : edit;
   }
 
   EditResult appendOpenBracket(List<InputToken> tokens) =>
@@ -162,10 +165,16 @@ class ExpressionEditor {
         _ => EditResult(result),
       };
 
+  /// `%` applies to the finished value before it, including one with a
+  /// power, as in GNOME Calculator: `5²%`, `9.9×10¹⁷%` (= 9.9×10¹⁵).
+  /// Not while a power is unfinished (`5⁻`).
   EditResult appendPercent(List<InputToken> tokens) =>
       switch (tokens.lastOrNull) {
-        NumberInput(isPendingSign: false, hasPower: false) ||
-        RightParenthesisInput(hasPower: false) ||
+        NumberInput(isPendingSign: true) ||
+        NumberInput(power: '-') ||
+        RightParenthesisInput(power: '-') => EditResult(tokens),
+        NumberInput() ||
+        RightParenthesisInput() ||
         PercentInput() => _append(tokens, [const PercentInput()]),
         _ => EditResult(tokens),
       };
@@ -290,6 +299,15 @@ class ExpressionEditor {
   static String _dropLastPowerChar(String power) {
     final shorter = power.substring(0, power.length - 1);
     return shorter == '-' ? '' : shorter;
+  }
+
+  /// Same tokens by value (tokens compare by value).
+  static bool _tokensMatch(List<InputToken> a, List<InputToken> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   static List<InputToken> _withoutLast(List<InputToken> tokens) =>
