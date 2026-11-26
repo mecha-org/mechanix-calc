@@ -18,5 +18,9 @@
   "invalidOperationsErrorMessage": "Error",
   "@invalidOperationsErrorMessage": {
     "description": "Error message for invalid mathematical operation or malformed expression"
+  },
+  "invalidPasteErrorMessage": "Can't paste: not a number or expression",
+  "@invalidPasteErrorMessage": {
+    "description": "Error message when the pasted clipboard text is not calculator input"
   }
 }

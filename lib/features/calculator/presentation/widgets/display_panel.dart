@@ -2,7 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
-import 'package:mechanix_calculator/features/calculator/data/utils/result_formatter.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/superscript.dart';
+import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_context_menu.dart';
 import 'package:mechanix_calculator/l10n/app_localizations.dart';
 import 'package:widgets/widgets.dart';
 
@@ -18,6 +19,10 @@ class DisplayPanel extends StatefulWidget {
   final ValueChanged<String>? onHistoryItemTap;
   final VoidCallback? onDismissHistory;
 
+  /// Copy / Paste menu items, shown on long-press or right-click on the
+  /// main line (the large text). Null: no menu.
+  final List<ContextMenuButtonItem> Function()? contextMenuItems;
+
   const DisplayPanel({
     super.key,
     this.expression = '',
@@ -28,6 +33,7 @@ class DisplayPanel extends StatefulWidget {
     this.isHistoryOpen = false,
     this.onHistoryItemTap,
     this.onDismissHistory,
+    this.contextMenuItems,
   });
 
   @override
@@ -63,6 +69,16 @@ class _DisplayPanelState extends State<DisplayPanel> {
     }
   }
 
+  /// The menu reacts on the whole main line, full width and as tall as the
+  /// large text, so a short value such as `0` is easy to long-press. The
+  /// top line and the empty part of the display have no menu.
+  Widget _withContextMenu(Widget mainLine) {
+    final items = widget.contextMenuItems;
+    return items == null
+        ? mainLine
+        : DisplayContextMenu(buttonItems: items, child: mainLine);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.isHistoryOpen) {
@@ -73,25 +89,16 @@ class _DisplayPanelState extends State<DisplayPanel> {
     }
 
     final l10n = AppLocalizations.of(context);
-    final String topExpression;
-    final String bottomText;
-
-    if (widget.errorMessage.isNotEmpty &&
-        widget.errorMessage == invalidOperationsErrorMessage) {
-      topExpression = widget.expression.isNotEmpty
-          ? widget.expression
-          : widget.calculatedExpression;
-      bottomText = _getErrorMessage(l10n, widget.errorMessage);
-    } else if (widget.expression.isNotEmpty) {
-      topExpression = '';
-      bottomText = widget.expression;
-    } else if (widget.calculatedExpression.isNotEmpty) {
-      topExpression = widget.calculatedExpression;
-      bottomText = widget.result.isNotEmpty ? widget.result : '0';
-    } else {
-      topExpression = '';
-      bottomText = widget.result.isNotEmpty ? widget.result : '0';
-    }
+    final lines = displayLines(
+      expression: widget.expression,
+      calculatedExpression: widget.calculatedExpression,
+      result: widget.result,
+      errorMessage: widget.errorMessage,
+    );
+    final topExpression = lines.top;
+    final bottomText = lines.showsError
+        ? _getErrorMessage(l10n, widget.errorMessage)
+        : lines.main;
 
     final displayMediumStyle = Theme.of(context).textTheme.displayMedium!
         .copyWith(
@@ -124,13 +131,15 @@ class _DisplayPanelState extends State<DisplayPanel> {
             const SizedBox(height: 8),
           ],
 
-          /// Use a small set of font sizes based on expression length
-          Align(
-            alignment: Alignment.centerRight,
-            child: ExponentText(
-              bottomText,
-              style: displayMediumStyle.copyWith(
-                fontSize: getDisplayFontSize(bottomText),
+          _withContextMenu(
+            // menu wraps the whole line
+            Align(
+              alignment: Alignment.centerRight,
+              child: ExponentText(
+                bottomText,
+                style: displayMediumStyle.copyWith(
+                  fontSize: getDisplayFontSize(bottomText),
+                ),
               ),
             ),
           ),
@@ -316,7 +325,7 @@ class ExponentText extends StatelessWidget {
     this.overflow,
   });
 
-  static final _exponentRun = RegExp('[${ResultFormatter.superscriptChars}]+');
+  static final _exponentRun = RegExp('[${Superscript.chars}]+');
 
   @override
   Widget build(BuildContext context) {
@@ -345,7 +354,7 @@ class ExponentText extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(left: fontSize * 0.04),
             child: Text(
-              ResultFormatter.fromSuperscript(match[0]!),
+              Superscript.toPlain(match[0]!),
               // Unique per exponent: text can hold several ("…×10¹⁷+…×10³").
               key: ValueKey('exponent_${index++}'),
               maxLines: 1,
@@ -371,6 +380,35 @@ class ExponentText extends StatelessWidget {
   }
 }
 
+/// What the two display lines show: [top] (small: the calculated
+/// expression) and [main] (large: the input, the result, or `0`).
+///
+/// The one place that decides this; Copy uses [main] too, so it copies what
+/// is on screen. With [showsError] the main line is the error (shown
+/// localized) and there is nothing to copy.
+({String top, String main, bool showsError}) displayLines({
+  required String expression,
+  required String calculatedExpression,
+  required String result,
+  required String errorMessage,
+}) {
+  if (errorMessage == invalidOperationsErrorMessage) {
+    return (
+      top: expression.isNotEmpty ? expression : calculatedExpression,
+      main: errorMessage,
+      showsError: true,
+    );
+  }
+  if (expression.isNotEmpty) {
+    return (top: '', main: expression, showsError: false);
+  }
+  return (
+    top: calculatedExpression,
+    main: result.isNotEmpty ? result : '0',
+    showsError: false,
+  );
+}
+
 String _getErrorMessage(AppLocalizations? l10n, String key) {
   if (l10n == null) return key;
 
@@ -383,6 +421,8 @@ String _getErrorMessage(AppLocalizations? l10n, String key) {
       return l10n.maxOperationsErrorMessage;
     case invalidOperationsErrorMessage:
       return l10n.invalidOperationsErrorMessage;
+    case invalidPasteErrorMessage:
+      return l10n.invalidPasteErrorMessage;
     default:
       return l10n.invalidOperationsErrorMessage;
   }
@@ -391,6 +431,6 @@ String _getErrorMessage(AppLocalizations? l10n, String key) {
 double getDisplayFontSize(String text) {
   if (text.length > 60) return 24;
   if (text.length > 40) return 32;
-  if (text.length > 16) return 40;
+  if (text.length > 15) return 40;
   return 52;
 }

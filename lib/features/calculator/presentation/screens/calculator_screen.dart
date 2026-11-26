@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mechanix_calculator/core/utils/constant.dart';
 import 'package:mechanix_calculator/features/calculator/data/utils/expression_builder.dart';
+import 'package:mechanix_calculator/features/calculator/domain/input/copied_text.dart';
 import 'package:mechanix_calculator/features/calculator/presentation/widgets/button_grid.dart';
+import 'package:mechanix_calculator/features/calculator/presentation/widgets/display_context_menu.dart';
 import 'package:widgets/widgets.dart';
 import '../../bloc/calculator_bloc.dart';
 import '../../bloc/calculator_event.dart';
@@ -50,18 +52,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _errorMessageNotifier.value = res.errorMessage;
   }
 
+  /// The result an operator, `%` or +/- continues on empty input. Null
+  /// before any calculation and after AC (no calculated expression yet), so
+  /// the "0" shown there is not continued.
+  String? get _previousResult {
+    final state = context.read<CalculatorBloc>().state;
+    return state.expression.isEmpty ? null : state.result;
+  }
+
   void _onOperatorPressed(String operator) {
     if (_hasFatalError) {
       _errorMessageNotifier.value = '';
-      _expressionNotifier.value = operator == '-' ? '-' : '';
+      _expressionNotifier.value = '';
       context.read<CalculatorBloc>().add(const ClearPressed());
       return;
     }
-    final previousResult = context.read<CalculatorBloc>().state.result;
     final res = ExpressionBuilder.handleOperator(
       _expressionNotifier.value,
       operator,
-      previousResult: previousResult,
+      previousResult: _previousResult,
     );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
@@ -94,16 +103,42 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    String currentExpr = _expressionNotifier.value;
-    if (currentExpr.isEmpty) {
-      final previousResult = context.read<CalculatorBloc>().state.result;
-      if (previousResult.isNotEmpty && previousResult != '0') {
-        currentExpr = previousResult.replaceAll(',', '');
-      }
-    }
-    final res = ExpressionBuilder.handleToggleSign(currentExpr);
+    final res = ExpressionBuilder.handleToggleSign(
+      _expressionNotifier.value,
+      previousResult: _previousResult,
+    );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
+  }
+
+  void _onSuperscriptPressed(String digit) {
+    if (_hasFatalError) {
+      _onClearPressed();
+      return;
+    }
+    _apply(
+      ExpressionBuilder.handleSuperscript(_expressionNotifier.value, digit),
+    );
+  }
+
+  void _onOpenBracketPressed() {
+    if (_hasFatalError) {
+      _onClearPressed();
+    }
+    _apply(ExpressionBuilder.handleOpenBracket(_expressionNotifier.value));
+  }
+
+  void _onCloseBracketPressed() {
+    if (_hasFatalError) {
+      _onClearPressed();
+      return;
+    }
+    _apply(ExpressionBuilder.handleCloseBracket(_expressionNotifier.value));
+  }
+
+  void _apply(ExpressionResult result) {
+    _expressionNotifier.value = result.expression;
+    _errorMessageNotifier.value = result.errorMessage;
   }
 
   void _onPercentagePressed() {
@@ -111,25 +146,82 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _onClearPressed();
       return;
     }
-    final res = ExpressionBuilder.handlePercentage(_expressionNotifier.value);
+    final res = ExpressionBuilder.handlePercentage(
+      _expressionNotifier.value,
+      previousResult: _previousResult,
+    );
     _expressionNotifier.value = res.expression;
     _errorMessageNotifier.value = res.errorMessage;
   }
 
   void _onCalculateResult() {
     if (_expressionNotifier.value.isNotEmpty) {
-      final expr = _expressionNotifier.value;
+      final expr = ExpressionBuilder.closeBrackets(_expressionNotifier.value);
       _expressionNotifier.value = '';
       context.read<CalculatorBloc>().add(CalculateResult(expr));
     }
   }
 
+  /// What the main line shows, decided by [displayLines] from the same
+  /// values [_DisplayPanelSection] gives the display.
+  ({String top, String main, bool showsError}) get _displayLines {
+    final state = context.read<CalculatorBloc>().state;
+    final errorMessage = _errorMessageNotifier.value;
+    return displayLines(
+      expression: _expressionNotifier.value,
+      calculatedExpression: state.expression,
+      result: state.result,
+      errorMessage: _shownError(errorMessage, state.errorMessage),
+    );
+  }
+
+  /// Copies the main line as plain ASCII (`8888×979999` -> `8888*979999`,
+  /// `9.9×10¹⁷` -> `9.9*10^17`), so every app can paste it; nothing while an
+  /// error is shown.
+  Future<void> _onCopyPressed() async {
+    final lines = _displayLines;
+    if (lines.showsError) return;
+    await Clipboard.setData(
+      ClipboardData(text: CopiedText.fromDisplay(lines.main)),
+    );
+  }
+
+  /// Adds the clipboard text at the end of the input, as if typed. After an
+  /// error it starts from empty input, like any other key.
+  Future<void> _onPastePressed() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    if (!mounted || text == null || text.trim().isEmpty) return;
+    if (_hasFatalError) _onClearPressed();
+    _apply(ExpressionBuilder.handlePaste(_expressionNotifier.value, text));
+  }
+
+  /// Context menu items for the display: Copy unless an error is shown,
+  /// Paste always.
+  List<ContextMenuButtonItem> _contextMenuItems() => [
+    if (!_displayLines.showsError)
+      ContextMenuButtonItem(
+        type: ContextMenuButtonType.copy,
+        onPressed: _onCopyPressed,
+      ),
+    ContextMenuButtonItem(
+      type: ContextMenuButtonType.paste,
+      onPressed: _onPastePressed,
+    ),
+  ];
+
   void _handleButtonAction(CalculatorButtonData button) {
+    DisplayContextMenu.hide();
     switch (button.action) {
       case CalculatorActionType.number:
         _onNumberPressed(button.value ?? button.text ?? '');
+      case CalculatorActionType.superscript:
+        _onSuperscriptPressed(button.value!);
       case CalculatorActionType.operator:
         _onOperatorPressed(button.value ?? button.text ?? '');
+      case CalculatorActionType.openBracket:
+        _onOpenBracketPressed();
+      case CalculatorActionType.closeBracket:
+        _onCloseBracketPressed();
       case CalculatorActionType.clear:
         _onClearPressed();
       case CalculatorActionType.delete:
@@ -140,6 +232,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         _onPercentagePressed();
       case CalculatorActionType.calculate:
         _onCalculateResult();
+      case CalculatorActionType.copy:
+        _onCopyPressed();
+      case CalculatorActionType.paste:
+        _onPastePressed();
     }
   }
 
@@ -152,17 +248,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
 
-    final key = event.logicalKey;
-
-    // Special case: Shift + '=' => '+'
-    if (key == LogicalKeyboardKey.equal &&
-        HardwareKeyboard.instance.isShiftPressed) {
-      _closeHistory();
-      _onOperatorPressed('+');
-      return;
-    }
-
-    final action = logicalKeyboardKeyMap[key];
+    final keyboard = HardwareKeyboard.instance;
+    final action = buttonForKey(
+      event.logicalKey,
+      shift: keyboard.isShiftPressed,
+      control: keyboard.isControlPressed,
+      alt: keyboard.isAltPressed,
+      meta: keyboard.isMetaPressed,
+    );
     if (action != null) {
       // Same as tapping the button grid: typing closes the history panel.
       _closeHistory();
@@ -210,6 +303,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         expressionNotifier: _expressionNotifier,
                         errorMessageNotifier: _errorMessageNotifier,
                         isHistoryOpenNotifier: _isHistoryOpenNotifier,
+                        contextMenuItems: _contextMenuItems,
                       ),
                     ),
                     Expanded(
@@ -239,15 +333,22 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 }
 
+/// The error the display shows: one set by the input (a limit, an invalid
+/// paste), else the calculator's (e.g. "Error" for 5÷0).
+String _shownError(String inputError, String calculatorError) =>
+    inputError.isNotEmpty ? inputError : calculatorError;
+
 class _DisplayPanelSection extends StatelessWidget {
   final ValueNotifier<String> expressionNotifier;
   final ValueNotifier<String> errorMessageNotifier;
   final ValueNotifier<bool> isHistoryOpenNotifier;
+  final List<ContextMenuButtonItem> Function() contextMenuItems;
 
   const _DisplayPanelSection({
     required this.expressionNotifier,
     required this.errorMessageNotifier,
     required this.isHistoryOpenNotifier,
+    required this.contextMenuItems,
   });
 
   @override
@@ -279,11 +380,13 @@ class _DisplayPanelSection extends StatelessWidget {
                   expression: expression,
                   calculatedExpression: state.expression,
                   result: state.result,
-                  errorMessage: errorMessage.isNotEmpty
-                      ? errorMessage
-                      : state.errorMessage,
+                  errorMessage: _shownError(
+                    errorMessage,
+                    state.errorMessage,
+                  ),
                   history: state.history,
                   isHistoryOpen: false,
+                  contextMenuItems: contextMenuItems,
                   onDismissHistory: () {
                     isHistoryOpenNotifier.value = false;
                   },

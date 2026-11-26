@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -233,7 +234,7 @@ void main() {
       expect(find.text(invalidOperationsErrorMessage), findsNothing);
     });
 
-    testWidgets('minus after fatal error starts negative expression', (
+    testWidgets('minus after fatal error clears it and starts empty', (
       tester,
     ) async {
       await tester.pumpWidget(createScreen());
@@ -247,7 +248,10 @@ void main() {
       await tester.tap(find.widgetWithText(MechanixButton, '-'));
       await tester.pumpAndSettle();
 
-      expect(find.text('-').first, findsOneWidget);
+      // Checked on screen, like 'toggle sign clears fatal error': the bloc
+      // lives outside the test's fake-async zone, so its state lags here.
+      expect(find.text(invalidOperationsErrorMessage), findsNothing);
+      expect(find.text('(-'), findsNothing);
     });
 
     group('Keyboard shortcuts and events', () {
@@ -381,51 +385,50 @@ void main() {
         expect(find.text('7').first, findsOneWidget);
       });
 
-      testWidgets(
-        'backspacing a reused scientific result to empty shows 0',
-        (tester) async {
-          await tester.pumpWidget(createScreen());
+      testWidgets('backspacing a reused scientific result to empty shows 0', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
 
-          bloc.add(const CalculateResult('999999999×999999999'));
-          await tester.runAsync(() async {
-            for (var i = 0; i < 100 && bloc.state.history.isEmpty; i++) {
-              await Future<void>.delayed(const Duration(milliseconds: 10));
-            }
-          });
-          await tester.pumpAndSettle();
-          expect(bloc.state.result, '9.99999998×10¹⁷');
-
-          // 9.99999998×10¹⁷+9, then backspace one character at a time.
-          await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
-          await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
-          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // 9
-          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // +
-          await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // ⁷
-          await tester.pumpAndSettle();
-          expect(
-            find.textContaining('9.99999998×10', findRichText: true),
-            findsOneWidget,
-          );
-          // "9.99999998×10¹" has 14 characters left.
-          for (var i = 0; i < 14; i++) {
-            await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+        bloc.add(const CalculateResult('999999999×999999999'));
+        await tester.runAsync(() async {
+          for (var i = 0; i < 100 && bloc.state.history.isEmpty; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
           }
+        });
+        await tester.pumpAndSettle();
+        expect(bloc.state.result, '9.99999998×10¹⁷');
 
-          await tester.runAsync(() async {
-            for (var i = 0; i < 100 && bloc.state.result != '0'; i++) {
-              await Future<void>.delayed(const Duration(milliseconds: 10));
-            }
-          });
-          await tester.pumpAndSettle();
+        // 9.99999998×10¹⁷+9, then backspace one character at a time.
+        await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit9);
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // 9
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // +
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace); // ⁷
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('9.99999998×10', findRichText: true),
+          findsOneWidget,
+        );
+        // "9.99999998×10¹" has 14 characters left.
+        for (var i = 0; i < 14; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+        }
 
-          expect(bloc.state.result, '0');
-          expect(bloc.state.history, isNotEmpty);
-          expect(
-            find.textContaining('9.99999998×10', findRichText: true),
-            findsNothing,
-          );
-        },
-      );
+        await tester.runAsync(() async {
+          for (var i = 0; i < 100 && bloc.state.result != '0'; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        });
+        await tester.pumpAndSettle();
+
+        expect(bloc.state.result, '0');
+        expect(bloc.state.history, isNotEmpty);
+        expect(
+          find.textContaining('9.99999998×10', findRichText: true),
+          findsNothing,
+        );
+      });
 
       testWidgets('Escape key clears calculation when history is closed', (
         tester,
@@ -455,6 +458,167 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('4+').first, findsOneWidget);
+      });
+
+      Future<String> resultAfterEnter(WidgetTester tester) async {
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.runAsync(() async {
+          for (var i = 0; i < 100 && bloc.state.history.isEmpty; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        });
+        await tester.pumpAndSettle();
+        return bloc.state.result;
+      }
+
+      Future<void> sendWith(
+        WidgetTester tester,
+        LogicalKeyboardKey modifier,
+        LogicalKeyboardKey key,
+      ) async {
+        await tester.sendKeyDownEvent(modifier);
+        await tester.sendKeyEvent(key);
+        await tester.sendKeyUpEvent(modifier);
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('Ctrl + digit adds a superscript power: 5² = 25', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.digit2,
+        );
+
+        expect(await resultAfterEnter(tester), '25');
+        expect(bloc.state.history.first.expression, '5²');
+      });
+
+      testWidgets('^ key: 2^10 = 1,024', (tester) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.digit6,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+
+        expect(await resultAfterEnter(tester), '1,024');
+      });
+
+      testWidgets('negative power with ^ and +/-: 5^(-2) = 0.04', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.digit6,
+        );
+        await tester.tap(find.widgetWithText(MechanixButton, '+/-'));
+        await tester.pumpAndSettle();
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+
+        expect(await resultAfterEnter(tester), '0.04');
+        expect(bloc.state.history.first.expression, '5^(-2)');
+      });
+
+      testWidgets('negative superscript power: 5 Ctrl+- Ctrl+2 = 0.04', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.minus,
+        );
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.digit2,
+        );
+
+        expect(await resultAfterEnter(tester), '0.04');
+        expect(bloc.state.history.first.expression, '5⁻²');
+      });
+
+      testWidgets('brackets: 2(3+4 = 2×(3+4) = 14', (tester) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+        // The key simulator has no key code for the "(" or numpad "(" keys,
+        // so "(" is typed as Shift+9 (all map to the same action, see
+        // constant_test.dart).
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.digit9,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+        await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit4);
+
+        expect(await resultAfterEnter(tester), '14');
+        expect(bloc.state.history.first.expression, '2×(3+4)');
+      });
+
+      testWidgets('Shift+9 and Shift+0 type brackets', (tester) async {
+        await tester.pumpWidget(createScreen());
+
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.digit9,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+        await tester.sendKeyEvent(LogicalKeyboardKey.numpadAdd);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.digit0,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.numpadMultiply);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+
+        expect(await resultAfterEnter(tester), '9');
+        expect(bloc.state.history.first.expression, '(1+2)×3');
+      });
+
+      testWidgets('Ctrl, Alt and Meta with other keys type nothing', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.numpadAdd,
+        );
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.altLeft,
+          LogicalKeyboardKey.digit5,
+        );
+        await sendWith(
+          tester,
+          LogicalKeyboardKey.metaLeft,
+          LogicalKeyboardKey.digit5,
+        );
+
+        expect(await resultAfterEnter(tester), '7');
       });
 
       testWidgets('unmapped keys and non-KeyDown events are ignored safely', (
@@ -610,6 +774,244 @@ void main() {
           );
         },
       );
+    });
+
+    group('Copy and paste', () {
+      String? clipboard;
+
+      // Stands in for the system clipboard.
+      void mockClipboard(WidgetTester tester, [String? text]) {
+        clipboard = text;
+        final messenger = tester.binding.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(SystemChannels.platform, (
+          call,
+        ) async {
+          switch (call.method) {
+            case 'Clipboard.setData':
+              clipboard = (call.arguments as Map)['text'] as String?;
+              return null;
+            case 'Clipboard.getData':
+              return clipboard == null ? null : {'text': clipboard};
+            case 'Clipboard.hasStrings':
+              return {'value': clipboard != null};
+          }
+          return null;
+        });
+        addTearDown(
+          () =>
+              messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+        );
+      }
+
+      Future<void> ctrl(WidgetTester tester, LogicalKeyboardKey key) async {
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(key);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pumpAndSettle();
+      }
+
+      Finder onDisplay(String text) => find.descendant(
+        of: find.byType(DisplayPanel),
+        matching: find.text(text),
+      );
+
+      testWidgets('Ctrl+V pastes the clipboard as typed input', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester, '12 * 3');
+
+        await ctrl(tester, LogicalKeyboardKey.keyV);
+
+        expect(onDisplay('12×3'), findsOneWidget);
+      });
+
+      testWidgets('Ctrl+V appends to the input being typed', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester, '34');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+        await ctrl(tester, LogicalKeyboardKey.keyV);
+
+        expect(onDisplay('1234'), findsOneWidget);
+      });
+
+      testWidgets('pasting text that is not input leaves the input as is', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester, 'abc');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await ctrl(tester, LogicalKeyboardKey.keyV);
+
+        expect(onDisplay('5'), findsOneWidget);
+      });
+
+      testWidgets('Ctrl+C copies the input being typed', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+        await ctrl(tester, LogicalKeyboardKey.keyC);
+
+        expect(clipboard, '12');
+        expect(onDisplay('12'), findsOneWidget);
+      });
+
+      testWidgets('Ctrl+C copies × and ÷ as ASCII * and /', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester, '8888*979999/2');
+
+        await ctrl(tester, LogicalKeyboardKey.keyV);
+        expect(onDisplay('8888×979999÷2'), findsOneWidget);
+
+        await ctrl(tester, LogicalKeyboardKey.keyC);
+        expect(clipboard, '8888*979999/2');
+      });
+
+      testWidgets('Ctrl+C on the start screen copies 0', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await ctrl(tester, LogicalKeyboardKey.keyC);
+
+        expect(clipboard, '0');
+      });
+
+      testWidgets('Ctrl+X does nothing (no cut)', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit7);
+        await ctrl(tester, LogicalKeyboardKey.keyX);
+
+        expect(clipboard, isNull);
+        expect(onDisplay('7'), findsOneWidget);
+      });
+
+      testWidgets('long-press on the display shows Copy and Paste only', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await tester.pump(); // show the typed "5" before looking for it
+        await tester.longPress(onDisplay('5'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cut'), findsNothing);
+        expect(find.text('Copy'), findsOneWidget);
+        expect(find.text('Paste'), findsOneWidget);
+
+        await tester.tap(find.text('Copy'));
+        await tester.pumpAndSettle();
+
+        expect(clipboard, '5');
+        expect(find.text('Copy'), findsNothing); // the menu closes
+      });
+
+      testWidgets('nothing typed: the menu has Copy and Paste', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.longPress(onDisplay('0'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cut'), findsNothing);
+        expect(find.text('Copy'), findsOneWidget);
+        expect(find.text('Paste'), findsOneWidget);
+      });
+
+      testWidgets('long-press outside the main line shows no menu', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        // Top-left of the display: empty space, away from the "0".
+        await tester.longPressAt(
+          tester.getTopLeft(find.byType(DisplayPanel)) + const Offset(8, 8),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Copy'), findsNothing);
+        expect(find.text('Paste'), findsNothing);
+      });
+
+      testWidgets('long-press anywhere on the main line opens the menu', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        // Far left of the line that shows "0", away from the "0" itself.
+        final left = tester.getTopLeft(find.byType(DisplayPanel)).dx + 40;
+        final line = tester.getCenter(onDisplay('0')).dy;
+        await tester.longPressAt(Offset(left, line));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Copy'), findsOneWidget);
+        expect(find.text('Paste'), findsOneWidget);
+      });
+
+      testWidgets('right-click opens the menu; Paste pastes', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester, '42');
+
+        await tester.tap(onDisplay('0'), buttons: kSecondaryMouseButton);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Paste'));
+        await tester.pumpAndSettle();
+
+        expect(onDisplay('42'), findsOneWidget);
+        expect(find.text('Paste'), findsNothing);
+      });
+
+      testWidgets('pressing a key closes the menu', (tester) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.longPress(onDisplay('0'));
+        await tester.pumpAndSettle();
+        expect(find.text('Paste'), findsOneWidget);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Paste'), findsNothing);
+      });
+
+      testWidgets('while Error is shown the menu offers only Paste', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createScreen());
+        mockClipboard(tester);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit5);
+        await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+        await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        // The bloc lives outside the test's fake-async zone (see
+        // openHistory): wait for its Error, then rebuild.
+        await tester.runAsync(() async {
+          for (var i = 0;
+              i < 100 &&
+                  bloc.state.errorMessage != invalidOperationsErrorMessage;
+              i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+          }
+        });
+        await tester.pumpAndSettle();
+        expect(onDisplay(invalidOperationsErrorMessage), findsOneWidget);
+
+        await tester.longPress(onDisplay(invalidOperationsErrorMessage));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Copy'), findsNothing);
+        expect(find.text('Paste'), findsOneWidget);
+      });
     });
   });
 }
